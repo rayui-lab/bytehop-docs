@@ -5,9 +5,14 @@ description: 在使用者或 Agent 所在的电脑安装 ByteHop CLI，并按需
 
 ByteHop Client 指运行在用户电脑或 Agent 工具环境中的 `bytehop` CLI。它连接团队已经部署好的 ByteHop Server，不会在本机启动网关，也不保存数据库或内部 API 的上游凭证。
 
-```text
-用户或 Agent 所在电脑                     团队服务器
-CLI + 可选 Skill  ── HTTPS ──>  ByteHop Server  ──>  数据库 / API
+```mermaid
+flowchart LR
+  subgraph client[使用者或 Agent 的电脑]
+    skill[可选：ByteHop Skill] -. 指导调用 .-> cli[ByteHop CLI]
+  end
+
+  cli -- HTTPS --> server[团队部署的<br/>ByteHop Server]
+  server --> resources[数据库与内部 API]
 ```
 
 ## 安装前先拿到什么

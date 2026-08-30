@@ -47,7 +47,7 @@ auth:
         password: "${BYTEHOP_ADMIN_PASSWORD}"
         admin: true
       "alice@example.com":
-        password: "${BYTEHOP_ALICE_PASSWORD}"
+        password_hash: "$2a$12$..."
         groups: [data]
 
 resources:
@@ -67,6 +67,8 @@ access:
 ```
 
 这个例子刻意把管理能力和数据访问分开：`admin@example.com` 可以查看系统并热更新配置，但没有匹配任何 Access policy，因此不能调用 `analytics`；`alice@example.com` 属于 `data` 组，可以使用 `analytics`，却没有管理能力。
+
+把示例中的 `$2a$12$...` 替换为 `bytehop hash-password --password-stdin` 输出的完整值。
 
 ## Resource 与上游权限
 
@@ -93,19 +95,20 @@ resources:
 
 不要给 ByteHop 一个数据库管理员账号，再期待网关通过提示词或 SQL 解析区分权限。完整模型见[权限模型](/docs/administration/access-leases)和 [Resource 模型](/docs/resources)。
 
-## Secret 与环境变量
+## 上游 Secret 与用户密码
 
-配置支持 `${ENV_NAME}`。推荐把密码通过容器 Secret、systemd EnvironmentFile 或 Secret Manager 注入，不要把真实值提交到仓库。
+上游数据库/API 凭证必须能被 Server 还原后用于连接，因此继续使用 `${ENV_NAME}`，通过容器 Secret、systemd EnvironmentFile 或 Secret Manager 注入。
 
 ```bash
-export BYTEHOP_ALICE_PASSWORD='replace-me'
 export BYTEHOP_ADMIN_PASSWORD='replace-me'
 export CLICKHOUSE_READONLY_PASSWORD='replace-me'
 bytehop config check --config ./bytehop.yaml
 bytehop serve --config ./bytehop.yaml
 ```
 
-ByteHop 从部署环境读取 secret。轮换与版本继续交给现有 Secret 管理系统，生产环境为 ByteHop 配置专用的最小权限上游身份。
+本地用户密码只需要验证，不需要还原。新用户应在可信终端运行 `bytehop hash-password --password-stdin`，把输出写入 `password_hash`；新增用户和改密码都可以热更新。`password` 字段只用于兼容已有配置和生产示例的首个管理员。
+
+ByteHop 从部署环境读取上游 secret。轮换与版本继续交给现有 Secret 管理系统，生产环境为 ByteHop 配置专用的最小权限上游身份。
 
 ## 路径与严格校验
 

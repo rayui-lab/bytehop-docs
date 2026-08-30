@@ -8,10 +8,10 @@ v0.1 使用 YAML 管理用户目录，不提供公开注册或 Web 创建账号�
 ## 新增用户
 
 1. 为用户创建独立 subject，不共用账号；
-2. 从 Secret 渠道注入初始随机密码；
+2. 在可信终端为初始随机密码生成不可逆哈希；
 3. 只加入完成工作所需的组；
 4. 检查组对应的 Resource 与最大 TTL；
-5. 校验配置，并按 Secret 是否变化选择重建容器或热更新；
+5. 校验配置并热更新；
 6. 让用户按[第一次使用](/docs/quickstart)登录并验证可见 Resource；
 7. 同时验证一个不应可见的 Resource。
 
@@ -21,18 +21,20 @@ auth:
   local:
     users:
       "alice@example.com":
-        password: "${BYTEHOP_ALICE_PASSWORD}"
+        password_hash: "$2a$12$..."
         groups: [data]
         admin: false
 ```
 
-使用生产 Docker 示例时，把 `BYTEHOP_ALICE_PASSWORD` 加入部署目录的 `.env`。由于这是新的进程环境变量，添加或修改后需要重新创建 ByteHop 容器：
+`password_hash` 的完整值由管理员在可信终端生成，不要让 Agent 接收明文密码：
 
 ```bash
-docker compose up -d --force-recreate bytehop
+read -s BYTEHOP_NEW_PASSWORD
+printf '%s' "$BYTEHOP_NEW_PASSWORD" | bytehop hash-password --password-stdin
+unset BYTEHOP_NEW_PASSWORD
 ```
 
-只修改用户组、Access policy 等不依赖新环境变量的 YAML 时，才使用 `config check`、`config diff` 和 `config reload` 热更新。
+把输出粘贴到 YAML 后，运行 `config check`、`config diff` 和 `config reload`。新增用户不重启 Server，也不影响其他用户的 Session。
 
 ## 把账号交给用户
 
@@ -48,9 +50,9 @@ docker compose up -d --force-recreate bytehop
 
 ## 修改密码
 
-修改 YAML 引用的密码 Secret。生产 Docker 的 `.env` 发生变化时重建 ByteHop 容器；使用外部进程管理器时按其方式更新进程环境并重启。密码变化会使该用户已有 Session 与 Lease 失效，用户需要重新登录。
+重新运行 `bytehop hash-password --password-stdin`，用新输出替换该用户的 `password_hash`，再热更新。密码变化会使该用户已有 Session 与 Lease 失效，用户需要重新登录；其他用户不受影响。
 
-不要通过聊天发送真实密码。使用现有的 Secret 分发渠道，并要求用户只在可信终端输入。
+不要通过聊天发送真实密码。初始密码仍通过现有的 Secret 渠道交付，并要求用户只在可信终端输入。密码哈希不能还原出明文，但仍应把部署配置作为敏感文件管理。
 
 ## 停用或移除用户
 

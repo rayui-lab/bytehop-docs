@@ -17,18 +17,22 @@ flowchart LR
 
 ## 1. 下载部署包
 
-主机需要 Docker Engine、Docker Compose 和指向这台主机的域名。把版本换成实际要部署的 Release：
+主机需要 Docker Engine、Docker Compose 和指向这台主机的域名。下载器会取得最新部署包、校验 SHA-256，并解压到新的 `bytehop-deployment` 目录：
 
 ```bash
-VERSION=0.1.0
-curl -fLO "https://github.com/rayui-lab/bytehop-dist/releases/download/v${VERSION}/bytehop_${VERSION}_deployment.tar.gz"
-curl -fLO "https://github.com/rayui-lab/bytehop-dist/releases/download/v${VERSION}/SHA256SUMS"
-grep "bytehop_${VERSION}_deployment.tar.gz" SHA256SUMS | sha256sum -c -
-tar -xzf "bytehop_${VERSION}_deployment.tar.gz"
-cd "bytehop_${VERSION}_deployment"
+curl -fsSL https://github.com/rayui-lab/bytehop-dist/releases/latest/download/install-server.sh | sh
+cd bytehop-deployment
 ```
 
-部署包已经包含 `compose.yaml`、Caddy 配置、`config/bytehop.yaml` 和 `.env.example`，不需要从零编写 Compose。
+部署包已经包含 `compose.yaml`、Caddy 配置、`config/bytehop.yaml` 和 `.env.example`，不需要从零编写 Compose。目标目录非空时，下载器会停止，不会覆盖已有部署。
+
+生产环境需要固定版本时，让下载器与 Release 使用同一版本：
+
+```bash
+curl -fsSL https://github.com/rayui-lab/bytehop-dist/releases/download/v0.1.0/install-server.sh | \
+  sh -s -- --version 0.1.0 --install-dir bytehop-0.1.0
+cd bytehop-0.1.0
+```
 
 ## 2. 填写 `.env`
 
@@ -48,7 +52,7 @@ chmod 600 .env
 | `CLICKHOUSE_URL` | 首个只读 ClickHouse HTTP 地址 |
 | `CLICKHOUSE_USERNAME` / `CLICKHOUSE_PASSWORD` | 上游预先创建的最小权限账号 |
 
-示例默认创建 `admin@example.com` 和 `analytics` Resource。管理员密码是 ByteHop 登录密码；ClickHouse 密码只由 Server 使用，两者不要混淆。
+示例默认创建 `admin@example.com` 和 `analytics` Resource。`BYTEHOP_ADMIN_PASSWORD` 只用于首次管理员登录；ClickHouse 密码只由 Server 连接上游时使用，两者不要混淆。后续普通用户使用 YAML 中的不可逆密码哈希，不需要继续增加密码环境变量。
 
 如果首个资源不是 ClickHouse，先按[接入 Resource](/docs/administration/resource-onboarding)调整 `config/bytehop.yaml` 和 Compose 环境变量，再启动。
 
@@ -56,7 +60,6 @@ chmod 600 .env
 
 ```bash
 docker compose config --quiet
-docker compose pull
 docker compose up -d --wait
 ```
 
@@ -78,28 +81,25 @@ docker compose ps
 
 ## 添加第一个普通用户
 
-在 `.env` 增加用户密码，例如：
+在可信终端输入一次初始密码，并生成 bcrypt 哈希。明文不会写入 shell history：
 
-```dotenv
-BYTEHOP_ALICE_PASSWORD=replace-with-another-random-password
+```bash
+read -s BYTEHOP_NEW_PASSWORD
+printf '%s' "$BYTEHOP_NEW_PASSWORD" | \
+  docker compose exec -T bytehop /bytehop hash-password --password-stdin
+unset BYTEHOP_NEW_PASSWORD
 ```
 
-在 `config/bytehop.yaml` 的 `auth.local.users` 中增加：
+复制命令输出，在 `config/bytehop.yaml` 的 `auth.local.users` 中增加用户：
 
 ```yaml
 "alice@example.com":
-  password: "${BYTEHOP_ALICE_PASSWORD}"
+  password_hash: "$2a$12$..."
   groups: [data]
   admin: false
 ```
 
-生产 Compose 会把 `.env` 提供给 ByteHop 容器。新增或修改环境变量后重新创建 ByteHop 容器，让进程读取新值：
-
-```bash
-docker compose up -d --force-recreate bytehop
-```
-
-只有修改现有环境变量不涉及的 YAML 时，才可以使用管理员 CLI 执行无重启热更新：
+先在容器内校验与 Server 完全相同的配置，再使用已登录的管理员 CLI 预览并应用：
 
 ```bash
 docker compose exec bytehop \
@@ -107,6 +107,8 @@ docker compose exec bytehop \
 bytehop config diff
 bytehop config reload
 ```
+
+新增用户、修改 `password_hash`、调整用户组或 Access policy 都会热更新，不需要重建容器。修改密码会撤销该用户已有的 Session 与 Lease；新增用户不会影响其他成员。
 
 完整账号流程见[用户管理](/docs/administration/member-lifecycle)。添加用户后，用其账号登录并运行 `bytehop resources`，同时确认一个应允许和一个应拒绝的 Resource。
 

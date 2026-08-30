@@ -30,12 +30,17 @@ auth:
   local:
     users:
       "alice@example.com":
-        password: "${ALICE_PASSWORD}"
+        password_hash: "$2a$12$..."
         groups: [data, operations]
         admin: true
 ```
 
-v0.1 只支持 `provider: local`，且至少需要一个用户。`admin` 默认 `false`。
+v0.1 只支持 `provider: local`，且至少需要一个用户。`admin` 默认 `false`。每个用户必须且只能设置以下一项：
+
+- `password_hash`：推荐。使用 `bytehop hash-password --password-stdin` 生成 bcrypt 哈希，可随 YAML 热更新；
+- `password`：兼容已有配置，可引用环境变量。新配置不建议使用，因为进程环境变化需要重启。
+
+上例中的省略号必须替换为命令输出的完整哈希。
 
 ## `resources.<name>`
 
@@ -90,4 +95,4 @@ subject 是精确匹配。规则只做叠加，没有显式 deny；同一身份�
 
 ## 静态字段
 
-`listen`、`public_url`、`data_dir`、`web_dir`、内建 TLS cert/key 和 `allow_insecure_http` 变更需要重启。其余字段经过全量校验后可热重载。
+`listen`、`public_url`、`data_dir`、`web_dir`、内建 TLS cert/key 和 `allow_insecure_http` 变更需要重启。其余字段经过全量校验后可热重载。新增用户或修改 `password_hash` 不需要重启；修改哈希会撤销该用户已有 Session 与 Lease。
