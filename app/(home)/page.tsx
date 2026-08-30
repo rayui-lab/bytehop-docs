@@ -41,8 +41,8 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-7 max-w-2xl text-pretty text-base leading-7 text-fd-muted-foreground sm:text-lg sm:leading-8">
-            把 ClickHouse、Elasticsearch 和内部 API 接到一个自托管入口。
-            ByteHop 按用户授予短期访问，真实凭证始终留在服务端。
+            把 ClickHouse、Elasticsearch 和内部 API 接到一个自托管入口。 ByteHop
+            按用户授予短期访问，真实凭证始终留在服务端。
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
