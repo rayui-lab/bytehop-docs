@@ -78,8 +78,31 @@ body {
 }
 
 .bytehop-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
   min-width: 36rem;
-  max-height: 31rem;
+  margin-inline: auto;
+}
+
+.bytehop-diagram .flowchart-link,
+.bytehop-diagram .transition {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bytehop-diagram-loading {
+  min-height: 12rem;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-fd-muted-foreground) 8%, transparent),
+      transparent
+    ),
+    var(--color-fd-card);
+  background-size: 200% 100%;
+  animation: bytehop-diagram-loading 1.4s ease-in-out infinite;
 }
 
 .bytehop-diagram-error {
@@ -93,5 +116,15 @@ body {
 @media (max-width: 640px) {
   .bytehop-diagram svg {
     min-width: 30rem;
+  }
+}
+
+@keyframes bytehop-diagram-loading {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
   }
 }

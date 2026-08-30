@@ -34,7 +34,7 @@ NEXT_PUBLIC_SITE_URL=https://docs.example.com bun run build
 
 - `content/docs/`：MDX 文档与侧边栏 `meta.json`；
 - `app/(home)/page.tsx`：文档首页；
-- `components/mermaid.tsx`：构建期 Mermaid SVG renderer；
+- `components/mermaid.tsx`：Mermaid 官方 SVG renderer；
 - `source.config.ts`：MDX / Mermaid 配置。
 
 搜索索引使用 Fumadocs 的静态 multilingual 模式。`/llms.txt`、`/llms-full.txt` 与每页 Markdown 路由由构建自动生成，便于 Agent 读取。
