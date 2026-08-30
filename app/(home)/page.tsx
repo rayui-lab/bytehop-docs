@@ -17,13 +17,12 @@ export default function HomePage() {
             Self-hosted · HTTP-first · v0.1
           </p>
           <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-[-0.035em] text-fd-foreground sm:text-5xl md:text-6xl">
-            让 AI Agent 使用生产数据，
-            <span className="text-fd-primary">不接触真实凭证</span>
+            AI Agent 的<span className="text-fd-primary">生产资源访问层</span>
           </h1>
           <p className="mt-6 max-w-2xl text-pretty text-base leading-7 text-fd-muted-foreground sm:text-lg">
-            ByteHop 把固定的最小权限账号留在服务端，给人和 Agent
-            签发短期、资源绑定的 Lease。先覆盖 ClickHouse、Elasticsearch 与 HTTP
-            Bridge。
+            ByteHop 将生产凭证集中保留在服务端，以短期、可撤销、绑定单一
+            Resource 的 Lease，统一 ClickHouse、Elasticsearch 与内部 API
+            的访问边界。
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

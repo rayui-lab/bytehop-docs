@@ -23,11 +23,13 @@ export function baseOptions(): BaseLayoutProps {
         text: "文档",
         url: "/docs",
         active: "nested-url",
+        on: "nav",
       },
       {
         text: "开始使用",
         url: "/docs/quickstart",
         type: "button",
+        on: "nav",
       },
     ],
   };
