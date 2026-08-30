@@ -30,26 +30,19 @@ export default function HomePage() {
           <div className="mb-7 flex flex-wrap items-center gap-3 text-xs font-medium text-fd-muted-foreground">
             <span className="inline-flex items-center gap-2 rounded-full border bg-fd-background/75 px-3 py-1.5 backdrop-blur">
               <span className="size-1.5 rounded-full bg-fd-primary shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-fd-primary)_14%,transparent)]" />
-              Self-hosted · Public releases
+              Open source · Self-hosted
             </span>
             <span>HTTP-first · v0.1</span>
           </div>
 
           <h1 className="text-[2.7rem] font-semibold leading-[1.08] tracking-[-0.048em] text-fd-foreground sm:text-6xl lg:text-[4.25rem]">
-            <span className="block">
-              <span className="inline-block">让 AI Agent</span>{" "}
-              <span className="inline-block">访问生产资源，</span>
-            </span>
-            <span className="mt-1 block text-fd-primary sm:mt-2">
-              <span className="inline-block">不把真实凭证</span>{" "}
-              <span className="inline-block">交出去。</span>
-            </span>
+            <span className="inline-block">AI Agent 的</span>{" "}
+            <span className="inline-block text-fd-primary">生产访问网关。</span>
           </h1>
 
           <p className="mt-7 max-w-2xl text-pretty text-base leading-7 text-fd-muted-foreground sm:text-lg sm:leading-8">
-            {
-              "ByteHop 是小团队自托管的临时访问网关。把 ClickHouse、Elasticsearch 和内部 API 留在服务端，通过短期 Lease 交给 Codex、Claude 或脚本使用。"
-            }
+            把 ClickHouse、Elasticsearch 和内部 API 接到一个自托管入口。
+            ByteHop 按用户授予短期访问，真实凭证始终留在服务端。
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -68,7 +61,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-fd-muted-foreground sm:text-sm">
-            {["真实凭证不下发", "Lease 到期自动失效", "每次请求可追踪"].map(
+            {["凭证留在服务端", "短期访问自动失效", "请求全程留痕"].map(
               (item) => (
                 <span key={item} className="inline-flex items-center gap-1.5">
                   <CheckCircle2 className="size-3.5 text-fd-primary" />
