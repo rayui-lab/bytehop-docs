@@ -1,76 +1,57 @@
 ---
 title: 安装 ByteHop
-description: 从固定源码版本构建并部署单实例 ByteHop，向团队分发匹配版本的 CLI。
+description: 使用官方二进制或容器镜像安装同一版本的服务端与 CLI。
 ---
 
-ByteHop v0.1 由管理员从固定源码版本统一构建、部署，并向团队分发经过校验的 CLI。普通成员直接使用团队实例，不需要运行 Compose 验收栈。
+ByteHop 的服务端和 CLI 是同一个二进制文件。团队管理员通常用容器运行服务端，成员从同一个 GitHub Release 下载本机 CLI；两者固定为相同版本。
 
-## 需要准备
+## 选择安装方式
 
-- 一台能访问上游数据库 / API、但不直接暴露公网的 Linux 主机；
-- Go 1.26 与 Bun 1.4 构建环境；
-- 一个 HTTPS 域名，或可信反向代理；
-- ByteHop YAML、外部注入的 Secret 和持久化数据目录；
-- 数据库 / API 管理员预先创建的固定最小权限身份。
+| 使用场景 | 推荐方式 |
+| --- | --- |
+| 在 Linux 主机部署团队实例 | [Docker Compose](./docker) |
+| 在 macOS、Linux 或 Windows 安装 CLI | GitHub Release 二进制 |
+| 修改 ByteHop 本身 | [从源码构建](../development/source-build) |
 
-## 1. 固定并构建版本
+## 安装预编译二进制
 
-```bash
-git checkout <reviewed-commit>
-make check
-make build
-./bin/bytehop version
-sha256sum ./bin/bytehop
-```
+每个 Release 提供以下平台：
 
-macOS 可以用 `shasum -a 256`。记录 commit、构建平台、版本输出和 checksum。不要用未记录的工作区产物覆盖正在运行的服务。
+| 操作系统 | 架构 | 文件 |
+| --- | --- | --- |
+| Linux | amd64、arm64 | `.tar.gz` |
+| macOS | amd64、arm64 | `.tar.gz` |
+| Windows | amd64、arm64 | `.zip` |
 
-## 2. 准备配置
-
-从仓库的 `examples/bytehop.yaml` 开始，至少替换：
-
-- `server.public_url`、监听地址与 TLS；
-- 每位成员的独立本地账号与组；
-- Resource 的上游地址和固定身份；
-- 显式 Access policy；
-- `data_dir` 持久化路径。
-
-所有 secret 使用 `${ENV_NAME}` 引用，由 systemd、容器 Secret 或现有 Secret Manager 注入。
+以 Linux amd64 和 `v0.1.0` 为例：
 
 ```bash
-bytehop config check --config /etc/bytehop/bytehop.yaml
-```
-
-## 3. 启动单实例
-
-```bash
-bytehop serve --config /etc/bytehop/bytehop.yaml
-```
-
-用进程管理器设置专用非 root 用户、自动重启、只读配置与可写数据目录。健康检查：
-
-```bash
-bytehop healthcheck https://bytehop.example.com/healthz
-```
-
-如果在反向代理终止 TLS，ByteHop 只应监听受控内网；不要让后端明文端口同时暴露给办公网或公网。完整检查见[生产部署清单](./production)。
-
-## 4. 分发 CLI
-
-`bytehop` 同一二进制也包含 CLI。为成员的平台单独构建，放在团队现有可信软件分发渠道，并同时公布 SHA-256。成员安装后先运行：
-
-```bash
+VERSION=0.1.0
+curl -fLO "https://github.com/bytehop/bytehop/releases/download/v${VERSION}/bytehop_${VERSION}_linux_amd64.tar.gz"
+curl -fLO "https://github.com/bytehop/bytehop/releases/download/v${VERSION}/SHA256SUMS"
+grep "bytehop_${VERSION}_linux_amd64.tar.gz" SHA256SUMS | sha256sum -c -
+tar -xzf "bytehop_${VERSION}_linux_amd64.tar.gz"
+sudo install -m 0755 "bytehop_${VERSION}_linux_amd64/bytehop" /usr/local/bin/bytehop
 bytehop version
 ```
 
-服务端与 CLI 应固定为同一已验证版本，升级时一起完成兼容性检查。
+macOS 使用对应的 `darwin_amd64` 或 `darwin_arm64` 包，并把校验命令换成 `shasum -a 256 -c`。Windows 解压 `.zip` 后，将 `bytehop.exe` 放进受控的软件目录并加入 `PATH`。
 
-## 5. 完成首个接入
+<Callout title="先核对再安装">
+  校验和文件与二进制必须来自同一个 Release。不要从聊天附件、临时网盘或不明镜像分发 ByteHop。
+</Callout>
 
-按以下顺序继续：
+## 服务端需要准备什么
 
-1. [接入 Resource](./resource-onboarding)；
-2. [权限模型](./access-leases)；
-3. [成员生命周期](./member-lifecycle)；
-4. 让成员按[第一次使用](../quickstart)完成登录与查询；
-5. 在 **Events** 确认调用者、Resource、request ID 与结果状态。
+- 一台能访问上游数据库或 API 的 Linux 主机；
+- HTTPS 域名，或团队已有的可信入口网关；
+- ByteHop YAML、通过环境变量注入的 Secret 和持久数据目录；
+- 数据库或 API 管理员预先创建的固定最小权限身份。
+
+服务端启动后，按以下顺序完成接入：
+
+1. [使用 Docker 部署](./docker)；
+2. [接入 Resource](./resource-onboarding)；
+3. [配置权限](./access-leases)；
+4. [管理成员](./member-lifecycle)；
+5. 让成员按[第一次使用](../quickstart)完成登录与查询。

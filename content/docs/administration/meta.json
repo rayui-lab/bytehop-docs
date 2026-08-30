@@ -2,6 +2,7 @@
   "title": "部署与运维",
   "pages": [
     "installation",
+    "docker",
     "configuration",
     "access-leases",
     "resource-onboarding",

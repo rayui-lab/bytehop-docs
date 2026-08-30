@@ -22,6 +22,8 @@ make build
 
 `make build` 先构建 Web UI，再将静态资源嵌入同一个 Go 二进制。`bin/bytehop` 同时包含服务端和 CLI。
 
+SQLite 使用 [`cznic/sqlite`](https://gitlab.com/cznic/sqlite) 的官方 module 路径 `modernc.org/sqlite`。这个驱动不依赖 CGo，因此发布脚本可以从同一个 Runner 交叉编译六个目标平台。
+
 ## 基础检查
 
 ```bash
@@ -39,12 +41,20 @@ go vet ./...
 
 ## 版本化分发
 
-团队内部交付时按以下方式完成版本化分发：
+仓库的 `.github/workflows/release.yml` 在推送语义版本 tag（例如 `v0.1.0`）时自动完成：
 
-1. 固定源码 commit，不使用未记录的工作区构建；
-2. 在目标操作系统与 CPU 架构上构建；
-3. 生成并一起公布 SHA-256；
-4. 服务端与 CLI 使用同一个已验证版本；
-5. 在升级前阅读配置 diff 与版本说明。
+1. 运行 Go 测试并构建内嵌 Web UI；
+2. 交叉编译 Linux、macOS、Windows 的 amd64 / arm64 二进制；
+3. 打包生产 Compose 示例并生成 `SHA256SUMS`；
+4. 发布 GitHub Release；
+5. 构建并推送 GHCR 的 linux/amd64 与 linux/arm64 镜像，同时生成 SBOM 和 provenance。
+
+本地可以预演同一打包脚本：
+
+```bash
+make release-snapshot
+```
+
+发布版本通过 Go linker flags 写入二进制，因此 `bytehop version`、`/healthz` 和管理界面显示同一个版本。
 
 完成本地构建后，继续运行[本地验收环境](./local-stack)。

@@ -7,8 +7,8 @@ ByteHop 目前更适合小团队单实例部署。以下清单不是合规承诺
 
 ## 发布物与变更
 
-- [ ] 固定源码 commit 和自建镜像 tag，不使用漂移的 `latest`；
-- [ ] 在与生产相同架构上运行 `go test ./...`、Web build 和 Compose smoke；
+- [ ] 固定 GitHub Release、镜像 tag 和 SHA-256，不使用漂移的 `latest`；
+- [ ] 在预发布环境验证配置、登录、Lease 和关键 Resource；
 - [ ] 为 YAML、OpenAPI 与数据库迁移保留回滚副本；
 - [ ] 固定经过验收的版本，并保留升级与回滚记录；
 
