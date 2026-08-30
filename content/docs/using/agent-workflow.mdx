@@ -16,25 +16,24 @@ Skill 有两种彼此独立的使用模式：
 
 普通调用不需要读取 `bytehop.yaml`，也不需要访问部署主机。只有配置模式才会编辑服务端配置；Agent 不能因为安装了 Skill 获得额外的 Resource 或管理权限。
 
-## 一个 Skill 贯穿四个阶段
+## 调用前的依赖关系
 
 ```mermaid
 flowchart LR
-  I[安装到当前 Agent] --> C[描述资源并生成配置]
-  C --> U[描述任务并调用 Resource]
-  U --> N[随 ByteHop Release 更新]
+  S[管理员已部署 Server] --> A[管理员创建账号与 Resource 权限]
+  A --> C[用户电脑安装并登录 CLI]
+  C --> K[当前 Agent 安装 Skill]
+  K --> U[用户用自然语言描述任务]
+  U --> R[Agent 调用获准 Resource]
 ```
 
-| 阶段 | 人需要做什么 | Skill 帮 Agent 做什么 |
-| --- | --- | --- |
-| 安装 | 选择 Codex、Claude 或其他 Agent | 把稳定约定安装到当前 Agent 环境 |
-| 配置 | 提供真实上游、Secret 引用和使用者 | 修改 YAML，运行 `config check`，按要求预览或应用 |
-| 调用 | 用自然语言描述任务 | 发现 Resource、读取调用说明、选择 `request` 或 `connect` |
-| 更新 | 选择 latest 或团队固定版本 | 与 ByteHop Release 使用同一份版本化 Skill |
+对于普通用户，前置条件只有四项：已有 Server 地址、已有 ByteHop 账号、CLI 已安装并登录、该账号至少获准一个 Resource。Skill 位于最后一层，用来指导 Agent 调用 CLI；它不能替代前三项。
+
+管理员配置模式是另一条路径：Agent 必须位于能够读取 Server 配置文件的受控环境，应用变更时还需要管理员登录。普通用户不需要进入配置模式。
 
 ## 安装 ByteHop Skill
 
-先安装 ByteHop CLI，并确认 `bytehop version` 可运行。Skill 不捆绑二进制，也不会自动登录、授予 Resource 或绕过 ByteHop policy。
+先按[安装客户端](/docs/using/client-installation)安装 ByteHop CLI，并确认 `bytehop version` 可运行。Skill 不捆绑二进制，也不会自动登录、授予 Resource 或绕过 ByteHop policy。
 
 `bytehop.skill` 是一个可校验的 ZIP 分发包。安装器会下载同一 Release 的 `SHA256SUMS`，校验后只解压到明确指定的 Agent Skill 目录。
 
@@ -58,7 +57,13 @@ curl -fsSL \
 
 从源码开发时，可以复制完整的 `skills/bytehop/` 目录。不要只复制 `SKILL.md`：配置模式依赖 `references/configuration.md`，支持 UI 元数据的 Agent 还会读取 `agents/openai.yaml`。
 
-Hermes、OpenCode 或其他 Agent 使用各自的 Skill 目录或项目级 instructions，需要把完整 `bytehop/` 目录安装到该环境。安装器不会猜测未知目录，也不会为了兼容而修改多个 Agent 的配置文件。
+Hermes 使用原生 Skill 管理器安装同一个目录：
+
+```bash
+hermes skills install rayui-lab/bytehop/skills/bytehop
+```
+
+OpenCode 或其他 Agent 使用各自的 Skill 目录或项目级 instructions，需要把完整 `bytehop/` 目录安装到该环境。安装器不会猜测未知目录，也不会为了兼容而修改多个 Agent 的配置文件。
 
 安装后重新打开 Agent 会话。已经开始的会话可能仍在使用旧版说明。
 
@@ -67,6 +72,8 @@ Hermes、OpenCode 或其他 Agent 使用各自的 Skill 目录或项目级 instr
 </Callout>
 
 ## 配置模式
+
+这个模式只面向负责部署或维护 Server 的管理员。
 
 告诉 Agent 真实的 Resource 信息，但只提供 **Secret 环境变量名**，不要把 Secret 值贴进对话：
 
@@ -90,6 +97,8 @@ Skill 会要求 Agent：
 `config diff` 和 `config reload` 让服务端重读启动时的配置路径，不会把 Agent 本地任意 YAML 上传到 Gateway。完整接入步骤见[接入 Resource](/docs/administration/resource-onboarding)。
 
 ## 调用模式
+
+这个模式面向使用已经部署好 ByteHop 的普通用户和 Agent。
 
 安装 Skill 后，不需要在每次对话中粘贴命令规则。直接描述结果：
 

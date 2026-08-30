@@ -60,8 +60,8 @@ const skillStages = [
   },
   {
     step: "02",
-    title: "配置",
-    note: "描述上游、凭证引用和使用者，Agent 修改 YAML 并调用 CLI 校验。",
+    title: "管理员配置",
+    note: "在有 Server 配置权限的环境中，Agent 修改 YAML 并调用 CLI 校验。",
     example: "描述资源 → bytehop.yaml",
     href: "/docs/using/agent-workflow#配置模式",
   },
@@ -151,7 +151,8 @@ export default function HomePage() {
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[#737373] sm:text-[15px] sm:leading-7">
                   连接和凭证只配置在网关，资源按用户或用户组开放；Codex、Claude
-                  和脚本统一经由 ByteHop 转发，无需逐台配置数据库账号和 API Key。
+                  和脚本统一经由 ByteHop 转发，无需逐台配置数据库账号和 API
+                  Key。
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[#737373] sm:text-[15px] sm:leading-7">
                   Agent
@@ -286,7 +287,9 @@ export default function HomePage() {
               连接团队已有实例
             </h2>
             <p className="mt-4 max-w-md text-sm leading-6 text-[#a3a3a3]">
-              CLI 是必需的执行入口，Skill 是可选的 Agent 使用说明。开始前需要管理员提供 Server 地址和账号；这里不会部署 Server。
+              CLI 是必需的执行入口，Skill 是可选的 Agent
+              使用说明。开始前需要管理员提供 Server 地址和账号；这里不会部署
+              Server。
             </p>
           </div>
           <div className="min-w-0 px-7 py-12 sm:px-10 lg:px-14 lg:py-20">
@@ -330,8 +333,10 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col justify-center px-7 py-10 sm:px-10 lg:px-14">
               <p className="max-w-2xl text-sm leading-7 text-[#666] sm:text-base">
-                Skill 不包含 CLI、Server、账号或 Resource 权限。Client 已安装并登录后，Skill
-                才会让 Agent 按同一套约定发现能力、调用 Resource 和处理错误；管理员也可以在有配置权限的环境中使用配置模式。
+                Skill 不包含 CLI、Server、账号或 Resource 权限。Client
+                已安装并登录后，Skill 才会让 Agent 按同一套约定发现能力、调用
+                Resource
+                和处理错误；管理员也可以在有配置权限的环境中使用配置模式。
               </p>
               <Link
                 href="/docs/using/agent-workflow"
@@ -386,9 +391,10 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col justify-center px-7 py-10 sm:px-10 lg:px-14">
               <p className="max-w-2xl text-sm leading-7 text-[#666] sm:text-base">
-                安装 ByteHop Skill 后，告诉 AI
-                上游地址、凭证引用和谁可以使用。Skill 提供稳定的配置结构，CLI
-                负责真实校验、差异预览和热更新。
+                这个模式只面向有 Server 配置权限的管理员。告诉 AI
+                上游地址、凭证引用和谁可以使用；Skill 提供稳定的配置结构，CLI
+                负责真实校验、差异预览和热更新。普通用户调用 Resource 不需要接触
+                YAML。
               </p>
               <Link
                 href="/docs/using/agent-workflow#配置模式"
