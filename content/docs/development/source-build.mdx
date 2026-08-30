@@ -45,7 +45,7 @@ go vet ./...
 
 1. Go 测试与 Web UI 构建并行执行，Web 产物只生成一次；
 2. 在原生 amd64 与 arm64 runner 上并行打包 Linux、macOS、Windows 二进制；
-3. 打包生产 Compose 示例与 `bytehop.skill`，并生成 `SHA256SUMS`；
+3. 打包生产 Compose 示例、Server 下载器与 `bytehop.skill`，并生成 `SHA256SUMS`；
 4. 发布二进制、部署包和 Skill 到源码仓库 Release，并同步到公开 `bytehop-dist` Release；
 5. 从已打包的 Linux 二进制组装多架构镜像，不在 Docker 内重复测试或编译；
 6. 生成 SBOM 和 provenance。

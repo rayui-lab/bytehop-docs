@@ -9,9 +9,18 @@ description: 部署团队共用的 ByteHop Server，创建 Resource、用户和 
 
 团队只需要运行一个 ByteHop Server。它提供 Web、控制 API 和 HTTP 数据面，并保存用户、Resource、Lease 与 Event。每位成员的 CLI 和 Skill 都连接这个 Server。
 
-```text
-成员电脑                                      团队服务器
-Web / CLI / Agent + Skill  ── HTTPS ──>  ByteHop Server  ──>  数据库 / API
+```mermaid
+flowchart LR
+  subgraph clients[成员电脑]
+    web[Web]
+    cli[CLI]
+    agent[Agent + Skill]
+  end
+
+  web -- HTTPS --> server[团队部署的<br/>ByteHop Server]
+  cli -- HTTPS --> server
+  agent -- 调用 CLI --> cli
+  server --> resources[数据库与内部 API]
 ```
 
 CLI 与 Server 来自同一个 `bytehop` 二进制，但职责不同：服务器运行 `bytehop serve`；成员电脑运行 `login`、`resources`、`request` 和 `connect`。生产环境推荐用 Docker Compose 运行 Server。
@@ -26,7 +35,7 @@ CLI 与 Server 来自同一个 `bytehop` 二进制，但职责不同：服务器
 | 4. 分配权限 | user / group 到 Resource 的 Access policy | 成员只看到获准 Resource |
 | 5. 交付给成员 | Server 地址、账号、用途说明 | 成员按第一次使用完成验证 |
 
-ByteHop v0.1 没有公开注册。账号由管理员写入 `bytehop.yaml`，密码通过环境变量注入。成员拿到的是 ByteHop 账号，不是数据库账号。
+ByteHop v0.1 没有公开注册。账号由管理员写入 `bytehop.yaml`：生产示例的首个管理员使用环境变量完成启动，后续成员使用 `password_hash`，因此新增账号可以热更新。成员拿到的是 ByteHop 账号，不是数据库账号。
 
 ## 部署前准备
 

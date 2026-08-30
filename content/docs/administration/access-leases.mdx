@@ -50,10 +50,10 @@ auth:
   local:
     users:
       "alice@example.com":
-        password: "${ALICE_PASSWORD}"
+        password_hash: "$2a$12$..."
         groups: [data]
       "oncall@example.com":
-        password: "${ONCALL_PASSWORD}"
+        password_hash: "$2a$12$..."
         groups: [operations]
         admin: true
 

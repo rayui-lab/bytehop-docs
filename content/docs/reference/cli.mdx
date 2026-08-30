@@ -43,15 +43,16 @@ bytehop <command> [options]
 
 子进程获得 `BYTEHOP_ENDPOINT`、`BYTEHOP_RESOURCE`、`BYTEHOP_LEASE_ID` 与 `BYTEHOP_LEASE_EXPIRES_AT`。argv 中每个 `{endpoint}` 会被安全替换。
 
-## 管理员配置命令
+## 管理员配置与账号工具
 
 | 命令 | 用法 | 说明 |
 | --- | --- | --- |
 | `config check` | `bytehop config check [--config bytehop.yaml] [--json]` | 本地严格解析和校验 |
 | `config diff` | `bytehop config diff [--json]` | 让服务端读取启动配置路径并预览变化 |
 | `config reload` | `bytehop config reload [--json]` | 原子应用可热更新配置 |
+| `hash-password` | `bytehop hash-password --password-stdin` | 从标准输入生成本地用户的 bcrypt `password_hash` |
 
-`diff` / `reload` 需要当前 CLI Session 对应管理员身份。
+`diff` / `reload` 需要当前 CLI Session 对应管理员身份。`hash-password` 只在本地计算，不连接 Server，也不保存或输出明文。
 
 ## 服务命令
 

@@ -94,6 +94,8 @@ Skill 会要求 Agent：
 5. 执行 `bytehop config check --config <path>`；
 6. 只有你明确要求应用时，才执行 `config diff` 并在确认影响后运行 `config reload`。
 
+这里的环境变量只针对必须还原后连接上游的数据库/API Secret。新增本地用户或改密码时，Skill 会要求管理员在可信终端运行 `bytehop hash-password --password-stdin`，再把完整 `password_hash` 写入 YAML；Agent 不应接收明文用户密码。账号哈希、用户组和 Access policy 都可以热更新。
+
 `config diff` 和 `config reload` 让服务端重读启动时的配置路径，不会把 Agent 本地任意 YAML 上传到 Gateway。完整接入步骤见[接入 Resource](/docs/administration/resource-onboarding)。
 
 ## 调用模式
