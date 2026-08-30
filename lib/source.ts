@@ -1,7 +1,12 @@
 import { loader } from "fumadocs-core/source";
 import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
 import { defineDocs } from "fumadocs-mdx/macro";
-import { docsContentRoute, docsImageRoute, docsRoute } from "./shared";
+import {
+  docsContentRoute,
+  docsImageRoute,
+  docsRoute,
+  withBasePath,
+} from "./shared";
 
 const docs = defineDocs({
   dir: "content/docs",
@@ -41,18 +46,19 @@ export function getPageMarkdownUrl(page: (typeof source)["$inferPage"]) {
 
   return {
     segments,
-    url:
+    url: withBasePath(
       "/" +
-      [page.locale, ...docsContentRoute.split("/"), ...segments]
-        .filter(Boolean)
-        .join("/"),
+        [page.locale, ...docsContentRoute.split("/"), ...segments]
+          .filter(Boolean)
+          .join("/"),
+    ),
   };
 }
 
 export async function getLLMText(page: (typeof source)["$inferPage"]) {
   const processed = await page.data.getText("processed");
 
-  return `# ${page.data.title} (${page.url})
+  return `# ${page.data.title} (${withBasePath(page.url)})
 
 ${processed}`;
 }
