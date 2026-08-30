@@ -27,8 +27,8 @@ flowchart LR
 
 ```bash
 VERSION=0.1.0
-curl -fLO "https://github.com/bytehop/bytehop/releases/download/v${VERSION}/bytehop_${VERSION}_deployment.tar.gz"
-curl -fLO "https://github.com/bytehop/bytehop/releases/download/v${VERSION}/SHA256SUMS"
+curl -fLO "https://github.com/rayui-lab/bytehop/releases/download/v${VERSION}/bytehop_${VERSION}_deployment.tar.gz"
+curl -fLO "https://github.com/rayui-lab/bytehop/releases/download/v${VERSION}/SHA256SUMS"
 grep "bytehop_${VERSION}_deployment.tar.gz" SHA256SUMS | sha256sum -c -
 tar -xzf "bytehop_${VERSION}_deployment.tar.gz"
 cd "bytehop_${VERSION}_deployment"

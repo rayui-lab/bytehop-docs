@@ -38,3 +38,15 @@ NEXT_PUBLIC_SITE_URL=https://docs.example.com bun run build
 - `source.config.ts`：MDX / Mermaid 配置。
 
 搜索索引使用 Fumadocs 的静态 multilingual 模式。`/llms.txt`、`/llms-full.txt` 与每页 Markdown 路由由构建自动生成，便于 Agent 读取。
+
+## Netlify
+
+仓库根目录的 `netlify.toml` 已将构建目录固定为 `docs-site`，发布目录固定为 `docs-site/out`。在 Netlify 连接 `rayui-lab/bytehop` 后，不需要在网页中重复填写构建命令；每次推送 `main` 都会重新生成并部署静态文档。
+
+本地预演 Netlify 使用的构建：
+
+```bash
+cd docs-site
+bun install --frozen-lockfile
+NEXT_PUBLIC_SITE_URL=https://docs.example.com bun run build
+```

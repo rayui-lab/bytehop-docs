@@ -27,8 +27,8 @@ ByteHop 的服务端和 CLI 是同一个二进制文件。团队管理员通常�
 
 ```bash
 VERSION=0.1.0
-curl -fLO "https://github.com/bytehop/bytehop/releases/download/v${VERSION}/bytehop_${VERSION}_linux_amd64.tar.gz"
-curl -fLO "https://github.com/bytehop/bytehop/releases/download/v${VERSION}/SHA256SUMS"
+curl -fLO "https://github.com/rayui-lab/bytehop/releases/download/v${VERSION}/bytehop_${VERSION}_linux_amd64.tar.gz"
+curl -fLO "https://github.com/rayui-lab/bytehop/releases/download/v${VERSION}/SHA256SUMS"
 grep "bytehop_${VERSION}_linux_amd64.tar.gz" SHA256SUMS | sha256sum -c -
 tar -xzf "bytehop_${VERSION}_linux_amd64.tar.gz"
 sudo install -m 0755 "bytehop_${VERSION}_linux_amd64/bytehop" /usr/local/bin/bytehop

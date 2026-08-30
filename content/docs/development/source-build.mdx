@@ -55,6 +55,29 @@ go vet ./...
 make release-snapshot
 ```
 
+## 发布第一个版本
+
+先确认 `main` 已通过检查并推送，再创建带说明的 tag：
+
+```bash
+git switch main
+git pull --ff-only
+make check
+git tag -a v0.1.0 -m "ByteHop v0.1.0"
+git push origin main
+git push origin v0.1.0
+```
+
+推送 tag 后，GitHub Actions 会同时生成 Release 附件和 GHCR 多架构镜像。可以用 GitHub CLI 查看进度与结果：
+
+```bash
+gh run list --workflow Release
+gh release view v0.1.0
+docker buildx imagetools inspect ghcr.io/rayui-lab/bytehop:0.1.0
+```
+
+仓库或镜像为私有时，需要先使用具备 `read:packages` 权限的 token 登录 GHCR，再执行 `docker pull`。正式版本 tag 不包含后缀；`v0.1.0-rc.1` 这类 tag 会作为预发布版本。
+
 发布版本通过 Go linker flags 写入二进制，因此 `bytehop version`、`/healthz` 和管理界面显示同一个版本。
 
 完成本地构建后，继续运行[本地验收环境](./local-stack)。
