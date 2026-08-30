@@ -1,0 +1,73 @@
+---
+title: CLI 命令参考
+description: ByteHop v0.1 的用户命令、管理员命令、服务命令和常用参数。
+---
+
+```text
+bytehop <command> [options]
+```
+
+## 用户命令
+
+| 命令 | 用法 | 说明 |
+| --- | --- | --- |
+| `login` | `bytehop login <url> --user <name> --password-stdin [--json]` | 建立本地控制面 Session |
+| `logout` | `bytehop logout [--json]` | 服务端撤销 Session 后删除本地凭证 |
+| `resources` | `bytehop resources [name] [--json]` | 列出资源或查看单个 contract |
+| `request` | `bytehop request <resource> <method> <path> [options]` | 创建短 Lease，发一次 HTTP 请求，再撤销 |
+| `connect` | `bytehop connect <resource> [options] -- <command> [args...]` | 让现有 HTTP client 使用临时本地入口 |
+| `status` | `bytehop status [--all] [--json]` | 查看 Lease 与活动请求 |
+| `revoke` | `bytehop revoke <lease-id> [--json]` | 撤销 Lease 并取消相关活动请求 |
+
+### `request` 参数
+
+| 参数 | 说明 |
+| --- | --- |
+| `--body @-` | 从标准输入读取请求体 |
+| `--body @file` | 从文件读取请求体 |
+| `--content-type <value>` | 默认 `application/json` |
+| `--ttl <duration>` | 请求 Lease TTL，不能超过 policy |
+| `--agent-id <id>` | Agent 关联 ID；也可用 `BYTEHOP_AGENT_ID` |
+| `--task-id <id>` | Task 关联 ID；也可用 `BYTEHOP_TASK_ID` |
+| `--json` | 输出机器可读 envelope |
+
+`--format json` 仅为兼容保留，新调用使用 `--json`。
+
+### `connect` 参数与环境变量
+
+参数：`--ttl`、`--agent-id`、`--task-id`。子命令前必须有 `--`。
+
+子进程获得 `BYTEHOP_ENDPOINT`、`BYTEHOP_RESOURCE`、`BYTEHOP_LEASE_ID` 与 `BYTEHOP_LEASE_EXPIRES_AT`。argv 中每个 `{endpoint}` 会被安全替换。
+
+## 管理员配置命令
+
+| 命令 | 用法 | 说明 |
+| --- | --- | --- |
+| `config check` | `bytehop config check [--config bytehop.yaml] [--json]` | 本地严格解析和校验 |
+| `config diff` | `bytehop config diff [--json]` | 让服务端读取启动配置路径并预览变化 |
+| `config reload` | `bytehop config reload [--json]` | 原子应用可热更新配置 |
+
+`diff` / `reload` 需要当前 CLI Session 对应管理员身份。
+
+## 服务命令
+
+| 命令 | 用法 | 说明 |
+| --- | --- | --- |
+| `serve` | `bytehop serve [--config bytehop.yaml]` | 启动服务 |
+| `healthcheck` | `bytehop healthcheck <health-url>` | 检查健康端点，供容器使用 |
+| `version` | `bytehop version` | 输出版本 |
+
+## JSON 错误约定
+
+```json
+{
+  "ok": false,
+  "code": "auth_required",
+  "message": "no ByteHop login session is available",
+  "retryable": false,
+  "requires_user": true,
+  "next_action": "ask_user_to_complete_login"
+}
+```
+
+自动化应优先判断 `code`、`retryable` 和 `requires_user`，不要解析自然语言 `message`。

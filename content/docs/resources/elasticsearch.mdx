@@ -1,0 +1,48 @@
+---
+title: Elasticsearch
+description: 通过 Elasticsearch HTTP API 搜索索引，并把固定 API 身份留在服务端。
+---
+
+Elasticsearch 的 REST API 可以直接作为 ByteHop HTTP 数据面。建议为不同索引范围创建不同 role / API key，再映射成不同 Resource。
+
+## 配置
+
+使用 Bearer token：
+
+```yaml
+resources:
+  orders-search:
+    description: "Search paid orders"
+    kind: elasticsearch
+    upstream: "https://es.internal:9200"
+    credential:
+      bearer: "${ELASTICSEARCH_READONLY_TOKEN}"
+```
+
+或者用 Basic：
+
+```yaml
+credential:
+  basic:
+    username: bytehop_orders_ro
+    password: "${ELASTICSEARCH_READONLY_PASSWORD}"
+```
+
+## 发起搜索
+
+```bash
+printf '%s' '{"query":{"term":{"status":"paid"}},"size":10}' | \
+  bytehop request orders-search POST /orders/_search \
+  --body @- --content-type application/json --json \
+  --agent-id claude --task-id investigate-order
+```
+
+## 权限应该放在哪里
+
+在 Elasticsearch role 中限制 index privileges、index pattern 和集群权限。ByteHop 会剥离客户端的 `Authorization`、run-as 与 secondary authorization 头，但它不会理解 Elasticsearch 查询 DSL 的业务含义。
+
+如果两个团队允许搜索的索引不同，创建两个上游身份和两个 Resource，而不是共享一个高权限 token 后依赖 Agent 自律。
+
+## 仓库内可复现案例
+
+开发 Compose 会创建 `bytehop-orders` 索引和确定性订单数据，Smoke test 通过 ByteHop 搜索索引，并检查客户端输出中不存在上游密码。这是本地集成验收，不是客户案例。

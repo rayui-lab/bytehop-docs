@@ -1,0 +1,91 @@
+---
+title: 5 分钟跑通
+description: 用仓库自带的 Docker Compose 启动 ByteHop、ClickHouse、Elasticsearch、MongoDB Bridge 和示例 HTTP API。
+---
+
+这一页启动的是**本地验证环境**。它会创建演示账号、演示数据和 HTTP 明文入口，不能直接作为生产配置。
+
+## 前置条件
+
+- Docker 与 Docker Compose
+- `curl`、`jq`
+- Go（仅在本机编译 CLI 时需要）
+
+## 1. 启动完整环境
+
+在 ByteHop 源码根目录运行：
+
+```bash
+docker compose up --build --wait
+```
+
+默认入口是 `http://localhost:8443`。演示环境同时启动：
+
+- `dev-clickhouse`：含 `bytehop_demo.events` 示例表；
+- `dev-elasticsearch`：含 `bytehop-orders` 示例索引；
+- `dev-mongo-users`：真实 MongoDB 后面的受限 HTTP Bridge；
+- `dev-http-api`：模拟需要 Basic + Cookie 的内部 API。
+
+## 2. 运行闭环验证
+
+```bash
+./deploy/dev/smoke.sh
+```
+
+脚本会实际登录、发现资源、申请 Lease、查询三种数据源、验证跨资源隔离，并检查 ClickHouse 查询记录与停止能力。
+
+## 3. 用 CLI 发起第一次查询
+
+先构建 CLI：
+
+```bash
+make build
+```
+
+登录演示实例。密码通过标准输入传入，避免出现在 shell history：
+
+```bash
+printf '%s\n' 'bytehop-dev-password' | \
+  ./bin/bytehop login http://localhost:8443 \
+  --user alice@example.com --password-stdin
+```
+
+发现自己可用的资源：
+
+```bash
+./bin/bytehop resources
+./bin/bytehop resources dev-clickhouse
+```
+
+查询 ClickHouse：
+
+```bash
+printf '%s' \
+  'SELECT service, count() AS events FROM bytehop_demo.events GROUP BY service ORDER BY service FORMAT JSON' | \
+  ./bin/bytehop request dev-clickhouse POST / \
+  --body @- --content-type text/plain --json \
+  --agent-id codex --task-id quickstart
+```
+
+响应外层包含 `ok`、`complete`、`request_id` 和 `query_id`。业务结果位于 `data`，真实 ClickHouse 用户名和密码不会出现在输出中。
+
+## 4. 打开管理界面
+
+访问 [http://localhost:8443](http://localhost:8443)，使用相同演示账号登录。你可以查看：
+
+- 当前资源和自己的 Lease；
+- 历史 Event，包括 ClickHouse SQL；
+- 正在执行的 ClickHouse 查询，并停止卡住的查询；
+- 配置检查、差异预览与热重载。
+
+## 5. 停止环境
+
+```bash
+docker compose down
+```
+
+如果还要删除演示数据卷，明确加上 `--volumes`。这会移除本地测试数据，无法从容器恢复。
+
+<Callout type="warn" title="不要复制演示密码到生产">
+  生产环境必须使用 HTTPS、独立只读上游账号、外部注入的 Secret，以及真实的身份提供者。请继续阅读生产部署清单（后续章节）。
+</Callout>

@@ -1,0 +1,82 @@
+---
+title: HTTP API 参考
+description: ByteHop v0.1 的控制面和数据面端点概览。
+---
+
+普通使用优先选择 CLI。直接集成 HTTP API 时，控制面 Session 与数据面 Lease 是不同 token。
+
+## 认证方式
+
+- CLI：`Authorization: Bearer <session-token>` 调用控制面；
+- Web：`bytehop_session` HttpOnly Cookie；
+- 数据面：`Authorization: Bearer <lease-token>` 调用绑定的 `/proxy/<resource>/...`。
+
+Session token 不能直接代理 Resource；一个 Resource 的 Lease 也不能调用另一个 Resource。
+
+## 公开端点
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/healthz` | 进程健康检查 |
+| `GET` | `/api/v1/meta` | 实例名称、环境与版本 |
+| `POST` | `/api/v1/auth/login` | 建立 Web 或 CLI Session |
+
+## Session 控制面
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/auth/session` | 当前身份与到期时间 |
+| `POST` | `/api/v1/auth/logout` | 撤销当前 Session 与派生 Lease |
+| `GET` | `/api/v1/resources` | 当前身份可发现的 Resource |
+| `GET` | `/api/v1/resources/{name}` | Resource contract |
+| `GET` | `/api/v1/access` | 当前可见策略；admin 可见全部 |
+| `POST` | `/api/v1/leases` | 创建 Resource-bound Lease |
+| `GET` | `/api/v1/leases` | 当前可见 Lease 与活动请求 |
+| `POST` | `/api/v1/leases/{id}/revoke` | 撤销 Lease |
+| `GET` | `/api/v1/operations` | 当前运行 Operation |
+| `POST` | `/api/v1/operations/{id}/cancel` | 停止单个请求 |
+| `GET` | `/api/v1/activity` | 分页 Event；支持 `resource`、`limit`、`cursor` |
+| `POST` | `/api/v1/admin/config/reload` | admin 配置 diff / reload |
+
+创建 Lease：
+
+```json
+{
+  "resource": "analytics",
+  "ttl_seconds": 300,
+  "agent_id": "codex",
+  "task_id": "investigate-incident",
+  "client_type": "custom-client"
+}
+```
+
+响应中的原始 Lease token 只出现这一次。客户端不应记录或持久化超过实际任务需要的时间。
+
+配置预览使用 `{"dry_run":true}`，应用使用 `{"dry_run":false}`。
+
+## 数据面
+
+```text
+<METHOD> /proxy/{resource}/{path...}
+Authorization: Bearer <lease-token>
+```
+
+ByteHop 验证 Lease 与 path 中 Resource 一致，剥离客户端敏感 / 代理 headers，注入 Resource credential，再把响应返回客户端。
+
+响应会带 `X-ByteHop-Request-Id`；ClickHouse 还会提供 query ID 关联信息。外部或越界 redirect 不会被自动跟随。
+
+## 错误结构
+
+```json
+{
+  "ok": false,
+  "code": "permission_denied",
+  "message": "identity is not allowed to use this resource",
+  "retryable": false,
+  "requires_user": true,
+  "next_action": "contact_administrator",
+  "request_id": "req_..."
+}
+```
+
+API 尚未承诺跨大版本稳定。正式 SDK 或第三方集成应固定 ByteHop 版本，并覆盖错误 code 与 Lease 清理测试。

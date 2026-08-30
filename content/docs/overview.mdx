@@ -1,0 +1,36 @@
+---
+title: ByteHop 是什么
+description: 用最小的边界理解 ByteHop 解决的问题、工作方式和明确不做的事情。
+---
+
+ByteHop 是一个**面向 AI Agent 的自托管临时访问网关**。它位于 Agent 与生产数据或内部 HTTP API 之间，把长期固定凭证转成短期、可撤销、绑定资源的访问能力。
+
+## 它解决什么
+
+小团队常见的现状是：ClickHouse 密码写在每个人的 Agent 配置里，MongoDB 连接串被贴进对话，内部 API 的 Cookie 放在本地脚本中。这样虽然马上能用，但很难回答：谁现在还能访问、能访问什么、凭证是否已经复制、刚才实际执行了什么。
+
+ByteHop 把问题收敛成四步：
+
+1. 管理员在数据库侧创建固定的最小权限账号；
+2. ByteHop 在服务端保管该账号，用户和 Agent 看不到；
+3. 已登录用户按权限为一个资源申请短期 Lease；
+4. 请求通过网关执行，并记录资源、身份、状态和可用的操作摘要。
+
+## 为什么选择 HTTP
+
+首版统一使用 HTTP 数据面：ClickHouse 和 Elasticsearch 已有成熟 HTTP API；内部服务天然是 HTTP；MongoDB 等原生协议可以先通过受限 Bridge 暴露少量明确操作。
+
+这个取舍降低了多协议代理的实现与安全复杂度，也让 `curl`、CLI、Codex、Claude 和普通脚本使用同一套入口。代价是它不能让所有原生数据库客户端透明接入。
+
+## 它明确不做什么
+
+- 不把自己做成数据库权限系统；表级、行级和配额优先由数据库固定账号保证；
+- 不动态在每种数据库里创建临时用户；Lease 是 ByteHop 的临时身份，上游看到固定账号；
+- 不提供 SSH、RDP、Kubernetes 等完整基础设施访问；
+- 不把 Prompt、Skill 或 MCP 工具定义绑定进核心数据面；
+- 不检查 SQL 是否“业务正确”，也不替代数据库自己的只读限制；
+- 不承诺透明兼容原生 MongoDB、PostgreSQL 或 ClickHouse Native TCP 客户端。
+
+## 什么时候不该选它
+
+如果你的核心需求是原生协议、企业级审批、会话录像、DLP、SSH/Kubernetes 接入或多区域高可用，应先评估成熟 PAM / access platform。ByteHop 更适合已经有明确 HTTP 能力边界，希望先低成本解决“凭证不下发 + 临时授权 + 可观察”的小团队。

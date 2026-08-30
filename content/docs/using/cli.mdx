@@ -1,0 +1,70 @@
+---
+title: CLI 使用方式
+description: 登录、发现资源、发起请求、连接现有 HTTP 工具和撤销访问。
+---
+
+CLI 面向人、Agent 和自动化脚本。命令默认输出简洁的人类文本；需要机器读取时统一加 `--json`。
+
+## 登录与退出
+
+```bash
+printf '%s\n' "$BYTEHOP_PASSWORD" | \
+  bytehop login https://bytehop.example.com \
+  --user alice@example.com --password-stdin
+
+bytehop status
+bytehop logout --json
+```
+
+CLI Session 保存在用户配置目录的 `bytehop/session.json`，权限为 `0600`。可以用 `BYTEHOP_CONFIG_HOME` 指定另一个目录。`logout` 会请求服务端撤销当前 Session、派生 Lease 和受控请求；若服务端撤销无法确认，它不会谎报成功。
+
+## 发现资源
+
+```bash
+bytehop resources
+bytehop resources analytics --json
+```
+
+列表只包含当前身份可访问的 Resource。详情包含类型、最大 TTL、健康状态和可发现的操作，但不返回上游 URL 或 credential。
+
+## 发出一次请求
+
+`request` 会申请一个短期 Lease，完成请求后自动撤销。
+
+```bash
+printf '%s' 'SELECT version() FORMAT JSON' | \
+  bytehop request analytics POST / \
+  --body @- \
+  --content-type text/plain \
+  --json \
+  --agent-id codex \
+  --task-id diagnose-version
+```
+
+`--body` 只接受 `@-` 或 `@file`。这使 SQL 和 JSON 不必出现在 shell history。JSON 模式最多缓冲服务端配置允许的结果大小；超过限制会明确失败，不会静默截断。省略 `--json` 时响应体流式写入 stdout。
+
+## 临时连接现有 HTTP 工具
+
+```bash
+bytehop connect orders-api --ttl 10m -- \
+  curl -fsS '{endpoint}/v1/orders/123'
+```
+
+`connect` 在 `127.0.0.1` 打开随机临时端口，并使用不可猜测的 capability path。它会替换子进程 argv 中的 `{endpoint}`，同时提供：
+
+- `BYTEHOP_ENDPOINT`：含 capability path 的临时入口；
+- `BYTEHOP_RESOURCE`：当前资源名；
+- `BYTEHOP_LEASE_ID`、`BYTEHOP_LEASE_EXPIRES_AT`：Lease 元数据。
+
+子进程退出后入口关闭，Lease 被撤销。它只转发 HTTP，不是通用 TCP 隧道。
+
+## 查看与撤销
+
+```bash
+bytehop status --json
+bytehop revoke lea_0123456789abcdef0123456789abcdef
+```
+
+正常的 `request` 与 `connect` 会自动清理。`revoke` 主要用于提前终止 UI / `status` 中看到的 Lease，或处理异常退出留下的访问。
+
+完整参数见 [CLI 命令参考](../reference/cli)。

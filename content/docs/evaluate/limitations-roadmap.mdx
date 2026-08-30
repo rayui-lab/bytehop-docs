@@ -1,0 +1,46 @@
+---
+title: 限制与路线图
+description: 已实现、近期计划和需要真实需求验证后才扩展的能力。
+---
+
+路线图按风险闭环排序，不按“支持更多 Logo”排序。未来版本号与时间不是承诺；实现前应由真实团队使用反馈校正。
+
+## v0.1：当前能力
+
+- 单 Go 二进制：控制 API、HTTP 数据面、SQLite 和内嵌 Web；
+- 本地用户、group / user policy、短期 Resource Lease；
+- ClickHouse HTTP、Elasticsearch HTTP、通用 HTTP 与 Mongo Bridge；
+- Agent 友好 CLI、OpenAPI 操作发现、稳定 JSON 错误；
+- Event、ClickHouse SQL 历史、运行中查询与单请求停止；
+- 配置 check / diff / 原子热重载；
+- 可复现的 Docker Compose 集成环境。
+
+## 近期：先让生产使用可靠
+
+1. **明确开源许可证与发布渠道**：版本化二进制、容器镜像、校验和、升级与回滚说明；
+2. **外部身份**：OIDC，优先覆盖团队已有的飞书 / 企业身份入口，并区分人类与非交互 service identity；
+3. **Secret provider**：在环境变量基础上接入文件 / Docker Secret，再评估 Vault 或云 Secret Manager；
+4. **运维完整性**：健康指标、结构化日志、Event retention / 导出、备份恢复演练；
+5. **Resource contract 质量**：OpenAPI lint、连接测试、部署前 smoke 和更清楚的 Agent 重试语义。
+
+## 中期：按使用证据扩展
+
+- PostgreSQL 等资源优先评估可靠 HTTP adapter / Bridge，不立即自研原生协议代理；
+- 对高频内部 API 提供受限 capability 模板，而不是任意脚本远程执行；
+- 控制面配置版本与变更 Event，保持 YAML 为事实源；
+- 在明确单节点成为瓶颈后，设计多实例状态与滚动升级语义。
+
+## 暂不进入核心
+
+- SSH、RDP、Kubernetes 与完整堡垒机能力；
+- Prompt / Skill Registry、向量检索和知识资产管理；
+- SQL 业务审批、自然语言改写或自动放行；
+- 浏览器内 SQL IDE；
+- 为每一种数据库动态创建临时账号；
+- MCP-only 数据面。
+
+这些方向有价值，但会把产品从“Agent 临时访问网关”拉向 PAM、Agent 平台或知识中台。只有当现有用户的核心闭环已经可靠、且需求不能由成熟产品组合解决时才应进入。
+
+## 如何影响路线图
+
+有用的反馈应包含：Resource 类型、现有连接方式、为什么 HTTP / Bridge 不够、上游最小权限怎么定义、一天调用量、需要保留什么 Event，以及可以接受的部署复杂度。仅有“支持某数据库”不足以决定实现原生协议。

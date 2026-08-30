@@ -1,0 +1,70 @@
+---
+title: ClickHouse
+description: 通过 ClickHouse HTTP 接口查询、观察 SQL，并停止卡住的请求。
+---
+
+ByteHop 使用 ClickHouse HTTP 接口。客户端持有短期 Lease，ClickHouse 只看到管理员预先创建的固定用户。
+
+## 配置
+
+```yaml
+resources:
+  analytics:
+    description: "Production analytics, read only"
+    kind: clickhouse
+    upstream: "https://clickhouse.internal:8443"
+    credential:
+      basic:
+        username: bytehop_ro
+        password: "${CLICKHOUSE_READONLY_PASSWORD}"
+    tls:
+      ca_file: "./certs/internal-ca.pem"
+      server_name: "clickhouse.internal"
+```
+
+`insecure_skip_verify` 只应在受控的临时排障中使用，不要作为解决证书问题的长期配置。
+
+## 上游账号应该限制什么
+
+优先在 ClickHouse 侧使用用户、角色、Settings Profile、Constraints 和 Quota 落实：
+
+- `readonly` 或等价的只读能力；
+- 允许的 database / table；
+- 最大执行时间、内存、并发和结果规模；
+- 是否可读取 `system.processes` 中自己的查询；
+- 是否允许结束自己的查询。
+
+ByteHop 不需要管理员账号，也不会把 SQL allowlist 当作数据库权限的替代品。
+
+## 发起查询
+
+```bash
+printf '%s' \
+  'SELECT service, count() AS events FROM bytehop_demo.events GROUP BY service FORMAT JSON' | \
+  bytehop request analytics POST / \
+  --body @- --content-type text/plain --json \
+  --agent-id codex --task-id hourly-check
+```
+
+ByteHop 为请求生成不可由客户端覆盖的 `query_id`。JSON envelope 返回 `request_id` 和 `query_id`，方便把 Agent 输出、Event 和 ClickHouse 日志关联起来。
+
+## 看见并停止长查询
+
+正在运行的 ByteHop 请求会显示在 Web 的 **Sessions** 或 **My access**。管理员能看到所有请求，成员只能看到自己的请求。停止一个 Operation 会：
+
+1. 取消 ByteHop 到上游的当前连接；
+2. 在支持时尝试按 `query_id` 执行远端 `KILL QUERY`；
+3. 保留 Lease，不影响同一 Lease 的其他请求；
+4. 写入带结果的 Event。
+
+如果固定账号无法查看 `system.processes` 或结束自己的查询，界面仍显示 HTTP 摘要并能取消本地连接，但远端取消结果会明确标识为未确认。
+
+## SQL 历史保留什么
+
+Event 最多保存 64 KiB SQL，并标记是否截断。`INSERT ... FORMAT` 的数据区、通用请求体、响应体、headers 和 credential 不保存。
+
+SQL 仍可能含业务字面量，因此 SQLite 与 Event 页面应视为敏感审计数据，而不是无敏感信息的普通日志。
+
+## 仓库内可复现案例
+
+开发 Compose 会创建 `bytehop_demo.events`，用固定只读用户查询两组 service 事件。Smoke test 还会启动 `SELECT sleep(3)`，从运行列表读取 SQL 和 query ID，再执行真实停止。这是工程验收案例，不是客户案例。

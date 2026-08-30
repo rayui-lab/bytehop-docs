@@ -1,0 +1,45 @@
+---
+title: 运行中操作与 Event
+description: 看见正在执行的请求，停止卡住的 ClickHouse SQL，并用 Event 排查历史访问。
+---
+
+ByteHop 把“正在运行”和“已经发生”分开处理：Operation 是当前进程内的临时观察数据，Event 是写入 SQLite 的历史记录。
+
+## Operation
+
+运行中列表包含：
+
+- `request_id`、Lease、Resource 与 Resource kind；
+- actor、Agent ID、Task ID 与 client type；
+- 规范化命令摘要、ClickHouse query ID；
+- 开始时间、运行时长与是否可停止。
+
+停止一个请求不会撤销整个 Lease。对于 ClickHouse，ByteHop 先取消本地上游请求，再尝试按 `query_id` 结束远端查询，并把两步结果分别返回。
+
+<Callout title="观察范围是刻意有限的">
+  ByteHop 只展示自己当前进程发起的 Operation，不扫描数据库里由其他客户端创建的查询。这样避免把网关变成全库管理控制台。
+</Callout>
+
+## Event
+
+每次数据面访问会记录：
+
+| 类别 | 字段示例 |
+| --- | --- |
+| 归属 | actor、agent_id、task_id、client_type、client_ip |
+| 能力 | resource、lease_id、session_id |
+| 请求 | request_id、query_id、method、规范化 path |
+| 结果 | status、duration、request / response bytes、error code |
+| ClickHouse | 有界 SQL、是否截断、上游取消摘要 |
+
+不记录通用请求体、响应体、headers、连接串和 credential。ClickHouse 的 `INSERT ... FORMAT` 只保留语句前缀，不保存数据区。
+
+## 真实排障示例
+
+一位成员发现 Agent 查询长时间没有返回。管理员在 **Sessions** 按 actor 找到运行 90 秒的 SQL，记录 `request_id` 与 `query_id` 后停止单个 Operation。查询消失后，在 **Events** 中确认取消结果和耗时；成员仍可使用原 Lease 发起更小的聚合查询。
+
+这个流程比直接共享数据库管理员账号更容易归属，也避免为停止一次查询撤销该成员的全部访问。
+
+## 数据保留
+
+v0.1 尚未提供自动 retention、归档导出和外部 SIEM sink。上线前应把 `bytehop.db` 当作敏感状态文件纳入备份、访问控制与磁盘容量监控，并根据组织要求建立外部清理流程。

@@ -1,0 +1,43 @@
+---
+title: 与其他方案比较
+description: 从问题范围、客户端形态、协议和运维成本判断该用 ByteHop、现有平台还是直接凭证。
+---
+
+以下比较按各产品公开文档整理，最后核对于 **2026-08-30**。产品会变化，请在选型时重新检查链接。ByteHop 不试图用一张表证明“全面更好”，它只在较窄的 Agent HTTP 访问问题上更轻。
+
+## 快速判断
+
+| 方案 | 更适合解决 | 客户端 / 协议 | 对小团队的主要代价 |
+| --- | --- | --- | --- |
+| 直接分发只读凭证 | 临时、少量、低风险验证 | 任意原生客户端 | secret 散落，撤销、轮换和归属困难 |
+| 普通反向代理 / API Gateway | HTTP 路由、认证、限流 | HTTP | 通常缺少人 → Session → Resource Lease → Agent task 的模型 |
+| MCP Toolbox | 给 Agent 暴露数据库工具 | MCP 工具调用 | 与 MCP / 工具定义耦合，不是通用 HTTP 凭证交换层 |
+| ByteHop | Agent 使用少量生产 HTTP 能力 | CLI、HTTP；短期 Lease | v0.1 协议少、身份和 HA 尚基础 |
+| StrongDM / Teleport / Hoop | 更广的基础设施访问与企业控制 | 多种原生协议及平台代理 | 平台范围、组件和运维成本更大 |
+| Warpgate | 自托管 SSH / HTTP / MySQL / PostgreSQL 堡垒入口 | 原生目标协议 | 重点是堡垒访问，不是 Agent 资源契约与一次性请求体验 |
+
+## ByteHop 与 MCP Toolbox
+
+[Google MCP Toolbox](https://github.com/googleapis/mcp-toolbox) 的主线是为 Agent、IDE 和应用提供数据库工具，集中处理连接、认证与 tool definition，并通过 MCP 使用。它适合“我要给模型一组定义良好的数据库工具”。
+
+ByteHop 的主线是“我已经有 HTTP 能力或 Bridge，要把固定 credential 换成临时、可归属的 Resource Lease”。它不要求消费者使用 MCP，也不把 prompt / tool definition 放进核心数据面。两者可以组合：MCP Server 作为 ByteHop 的客户端，或 ByteHop 保护 MCP Server 背后的 HTTP 能力。
+
+## ByteHop 与完整访问平台
+
+- [StrongDM](https://docs.strongdm.com/concepts/how-strongdm-works) 使用客户端、Gateway / Relay 与 Resource 组成代理访问网络，并强调不向最终用户暴露资源凭证；它覆盖的资源与企业控制范围明显更广。
+- [Teleport](https://goteleport.com/docs/reference/architecture/) 由 Auth Service、Proxy Service 和部署到资源附近的 Agent 构成，重点覆盖基础设施身份、证书与原生协议。
+- [Hoop](https://hoop.dev/docs/gateway/overview) 提供 Gateway / Agent 形态，并扩展审批、DLP、会话记录和集成能力。
+- [Warpgate](https://warpgate.null.page/docs/) 是自托管堡垒入口，文档按 SSH、HTTP、MySQL 与 PostgreSQL target 组织。
+
+如果这些平台已经部署并能以合理体验支持 Agent，不应为了“更轻”重复建设。ByteHop 的差异是单进程、HTTP-first、Resource contract、一次性 `request` 和本地 `connect` adapter，而不是更多协议或更完整合规能力。
+
+## 与 Git / YAML 直接共享的关系
+
+Git 很适合保存配置和评审变化，ByteHop 也把 YAML 作为事实源。Git 本身不签发运行时 Lease、不保管服务端 credential、不代理请求，也不能回答某个 Agent 此刻正在执行哪条 SQL。两者是互补而不是替代：Git 管配置历史，ByteHop 管运行时访问。
+
+## 选型建议
+
+- 只有 1–2 个可信开发者和短期测试：先用数据库独立只读账号，未必需要网关；
+- 主要需求是 MCP 工具编排：先用 MCP Toolbox；
+- 需要 SSH / K8s / 原生数据库 / 审批：先评估成熟 access platform；
+- 主要问题是 Agent 上的 secret 分散，资源都有 HTTP 入口，团队希望自托管且保持简单：再选择 ByteHop。

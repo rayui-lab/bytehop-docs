@@ -1,0 +1,61 @@
+---
+title: HTTP API 与 Bridge
+description: 接入内部 API，或把 MongoDB、脚本等非 HTTP 能力包装成小而明确的 HTTP 操作。
+---
+
+`kind: http` 是最通用的 Resource。它既能代理现有内部 API，也能把暂时不适合实现原生代理的数据库、CLI 或脚本包装成少量受限操作。
+
+## 接入已有内部 API
+
+```yaml
+resources:
+  orders-api:
+    description: "Read order status"
+    kind: http
+    upstream: "https://orders.internal.example"
+    openapi: "./openapi/orders.yaml"
+    health_path: "/healthz"
+    credential:
+      basic:
+        username: "${ORDERS_API_USERNAME}"
+        password: "${ORDERS_API_PASSWORD}"
+      headers:
+        Cookie: "tide_sid=${ORDERS_API_TIDE_SID}"
+```
+
+Agent 只看到 Resource 和 OpenAPI 派生的操作，不会拿到 Basic 或 Cookie。客户端自带 Cookie 会被剥离，服务端配置的 Cookie 才会发送给上游。
+
+## 用 Bridge 接入 MongoDB
+
+如果第一版只需要“按 ID 查用户”和“按条件找最多 20 条记录”，无需实现 MongoDB Wire Protocol 代理。可以在 MongoDB 旁边部署一个小型 HTTP Bridge：
+
+```mermaid
+flowchart LR
+  A[Agent] -->|Lease + POST /v1/find| B[ByteHop]
+  B -->|固定 Bridge 身份| H[Mongo HTTP Bridge]
+  H -->|固定 Mongo URI| M[MongoDB]
+```
+
+Bridge 应固定或严格校验：database、collection、允许的操作、projection、limit、timeout 和响应大小。它持有 MongoDB URI，ByteHop 持有 Bridge credential，Agent 两者都看不到。
+
+示例请求：
+
+```bash
+printf '%s' '{
+  "collection":"users",
+  "filter":{"id":123},
+  "projection":{"_id":0,"id":1,"name":1,"plan":1},
+  "limit":1
+}' | bytehop request mongo-users POST /v1/find --body @- --json
+```
+
+## Bridge 的边界
+
+Bridge 不是“把任意命令放进 HTTP”。越通用，越容易重新引入远程代码执行和权限失控。一个合格的 Bridge 应提供领域动作，例如 `find_user`、`get_order_status`，或一个被严格限制的查询子集。
+
+## 仓库内两个可复现案例
+
+- `dev-mongo-users`：真实 MongoDB + 只读 `find` Bridge，种子用户 `Ada`；
+- `dev-http-api`：模拟已有 Davinci 风格的 Basic + `tide_sid` 认证，提供 `info`、`echo` 与延迟响应。
+
+两者用于验证身份注入、Cookie 覆盖、OpenAPI 发现、超时和凭证不泄露，不代表已接入真实生产系统。

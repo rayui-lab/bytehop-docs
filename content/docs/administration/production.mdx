@@ -1,0 +1,56 @@
+---
+title: 生产部署清单
+description: 在真实团队使用 ByteHop 前逐项确认网络、身份、上游权限、状态和恢复能力。
+---
+
+ByteHop 目前更适合小团队单实例部署。以下清单不是合规承诺，而是上线前的最低工程检查。
+
+## 发布物与变更
+
+- [ ] 固定源码 commit 和自建镜像 tag，不使用漂移的 `latest`；
+- [ ] 在与生产相同架构上运行 `go test ./...`、Web build 和 Compose smoke；
+- [ ] 为 YAML、OpenAPI 与数据库迁移保留回滚副本；
+- [ ] 阅读当前版本的限制；仓库尚无 License 时，不假定可再分发。
+
+## TLS 与网络
+
+- [ ] `server.public_url` 使用 HTTPS；
+- [ ] 使用内建 `tls_cert_file` + `tls_key_file`，或在可信反向代理终止 TLS；
+- [ ] 如果 TLS 在外部终止，ByteHop 只监听受控内网，不直接暴露公网；
+- [ ] 上游地址走内网或受验证的 TLS，并配置内部 CA；
+- [ ] 防火墙只允许 ByteHop 访问必要的数据库和 API。
+
+明文 HTTP 只能在 loopback 上使用，并且必须显式设置 `allow_insecure_http: true`。CLI 会拒绝登录非 loopback 的明文实例。
+
+## 身份与上游权限
+
+- [ ] 每位成员使用独立身份，不共享 Web / CLI 账号；
+- [ ] 组到 Resource 的策略显式列出，未匹配即拒绝；
+- [ ] 每个 Resource 使用专用最小权限上游身份；
+- [ ] 数据库侧限制表 / 索引、只读、超时、内存、并发和配额；
+- [ ] 不给 ByteHop 数据库管理员或创建用户权限；
+- [ ] Secret 由部署系统注入，不提交到 Git 或写进镜像。
+
+## 状态、备份与恢复
+
+- [ ] `server.data_dir` 位于持久卷，只有 ByteHop 进程可读；
+- [ ] 备份 YAML、OpenAPI、CA 文件和 `bytehop.db`；
+- [ ] 演练恢复到新主机，并确认旧 Session / Lease 不会继续有效；
+- [ ] 监控磁盘、进程重启、上游健康和失败 Event；
+- [ ] 建立 Event retention 和敏感 SQL 访问规则。
+
+SQLite 使用 WAL、foreign keys 与 busy timeout，数据库文件权限为 `0600`。进程重启会撤销上一进程遗留的 active Session 与 Lease，因此重启是安全边界的一部分，也会要求客户端重新登录。
+
+## 上线前验证
+
+- [ ] 普通成员只能发现应有的 Resource；
+- [ ] 一个 Resource 的 Lease 无法调用另一个 Resource；
+- [ ] 客户端输出与 Event 不含固定 credential；
+- [ ] 上游固定身份确实不能写入；
+- [ ] ClickHouse 长查询能看到，停止结果符合账号权限；
+- [ ] 注销会使 Session 及派生 Lease 失效；
+- [ ] 配置 diff 能准确指出需要重启和会撤销的范围。
+
+<Callout type="warn" title="当前不应宣称高可用">
+  v0.1 没有多节点 Session / Lease 协调、自动 failover 或正式升级协议。若停机窗口不可接受，先把这些能力作为上线前置需求，而不是仅在前面加一个负载均衡器。
+</Callout>

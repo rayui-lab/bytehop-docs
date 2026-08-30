@@ -1,0 +1,60 @@
+---
+title: 故障排查
+description: 从错误结构、登录状态、Resource 健康和 query ID 开始定位问题。
+---
+
+先保留 CLI 返回的 `request_id`、可选 `query_id` 和错误 `code`。不要为了排障把上游 credential 粘贴到工单或对话。
+
+## `auth_required`
+
+症状：CLI 返回退出码并提示需要用户操作。
+
+处理：
+
+```bash
+bytehop status --json
+printf '%s\n' "$BYTEHOP_PASSWORD" | \
+  bytehop login https://bytehop.example.com \
+  --user alice@example.com --password-stdin
+```
+
+确认系统时间正确、实例 URL 没有变更。若刚发生密码变更、用户删除、进程重启或 Web 注销，旧 Session 本就应该失效。
+
+## 看不到某个 Resource
+
+1. 运行 `bytehop resources --json`，确认不是名称记错；
+2. 管理员在 Web **Access** 检查用户组；
+3. 检查 Access policy 是否包含 `user:` / `group:` 前缀；
+4. 运行 `bytehop config check` 与 `config diff`；
+5. 配置未重载时，YAML 已修改不等于运行时已生效。
+
+## `forbidden` 或跨资源调用失败
+
+Lease 只绑定一个 Resource。不要复用另一个资源的 endpoint/token；让 CLI 为目标 Resource 重新申请。若身份确实没有策略，反复重试没有意义。
+
+## `result_too_large`
+
+`request --json` 需要把响应包装成统一 envelope，因此有大小上限。优先缩小 `LIMIT`、projection / `_source` 或聚合结果；需要完整大响应时省略 `--json` 使用流式输出，或用 `connect` 调用现有 HTTP client。
+
+## ClickHouse 查询停止后仍在上游运行
+
+检查 Operation 返回的 `local_cancelled`、`upstream_cancel_tried` 与 `upstream_cancelled`。本地取消成功只代表 ByteHop 不再等待响应；远端确认还依赖固定账号能按自身 `query_id` 查看并结束查询。
+
+用 Event 中的 `query_id` 在受控的数据库管理渠道继续排查。不要因此直接给 ByteHop 全局 `KILL QUERY` 管理权限。
+
+## `restart_required`
+
+配置 diff 包含 listener、public URL、data dir、web dir 或 TLS 终止方式等静态字段。ByteHop 拒绝部分应用。保存 diff，按生产变更流程重启全部配置。
+
+## 上游返回 401 / 403
+
+通常表示 Resource 的固定 credential 已失效或权限不足，而不是 Agent Lease 无效：
+
+- 在服务端检查环境变量是否注入；
+- 用同一固定身份在受控环境直接验证上游；
+- 若刚轮换 secret，执行 `config diff` / `reload`；
+- 查看 Event 的 status 与 error code，不要打印原始 credential。
+
+## 下一步仍无法定位
+
+收集 ByteHop 版本、实例 environment、时间范围、Resource 名、`request_id`、`query_id`、错误 JSON 和经过脱敏的配置结构。不要收集密码、token、Cookie、Mongo URI 或完整业务响应。

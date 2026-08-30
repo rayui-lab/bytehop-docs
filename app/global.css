@@ -1,0 +1,97 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+:root {
+  --bytehop-accent: #087d76;
+  --color-fd-primary: #087d76;
+  --color-fd-primary-foreground: #f5fffd;
+  --color-fd-ring: #0f9f94;
+  --color-fd-background: #fbfcfc;
+  --color-fd-card: #f5f8f7;
+  --color-fd-muted: #eef3f2;
+  --color-fd-border: color-mix(in oklab, #6e7f7c 24%, transparent);
+}
+
+.dark {
+  --bytehop-accent: #54d2c5;
+  --color-fd-primary: #54d2c5;
+  --color-fd-primary-foreground: #062522;
+  --color-fd-ring: #54d2c5;
+  --color-fd-background: #0c1110;
+  --color-fd-card: #111817;
+  --color-fd-muted: #17201f;
+  --color-fd-border: color-mix(in oklab, #87a39f 24%, transparent);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  /* biome-ignore lint/complexity/noImportantStyles: override the dialog library's inline scroll lock. */
+  margin-right: 0px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: keep the layout stable while the dialog is open. */
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+}
+
+.bytehop-mark {
+  display: inline-grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border: 1px solid color-mix(in oklab, var(--bytehop-accent) 45%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in oklab, var(--bytehop-accent) 12%, transparent);
+  color: var(--bytehop-accent);
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+
+.bytehop-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--color-fd-border) 42%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-fd-border) 42%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black 15%, transparent 82%);
+}
+
+.bytehop-diagram {
+  margin-block: 1.5rem;
+  overflow-x: auto;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 0.9rem;
+  background: var(--color-fd-card);
+  padding: 1rem;
+}
+
+.bytehop-diagram svg {
+  min-width: 36rem;
+  max-height: 31rem;
+}
+
+.bytehop-diagram-error {
+  border: 1px solid var(--color-fd-error);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: var(--color-fd-error);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .bytehop-diagram svg {
+    min-width: 30rem;
+  }
+}

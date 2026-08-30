@@ -1,0 +1,69 @@
+---
+title: 配置 ByteHop
+description: 用一份 YAML 定义服务、身份、资源与访问策略。
+---
+
+YAML 是 ByteHop 的唯一配置事实源。Web 不维护第二份 Resource 表单数据，SQLite 只保存运行状态与 Event。
+
+## 最小配置
+
+```yaml
+server:
+  listen: "127.0.0.1:8443"
+  public_url: "http://localhost:8443"
+  instance_name: "ByteHop Local"
+  environment: "development"
+  allow_insecure_http: true
+  data_dir: "./data"
+  session_ttl: 12h
+  default_lease_ttl: 15m
+
+auth:
+  provider: local
+  local:
+    users:
+      "alice@example.com":
+        password: "${BYTEHOP_ALICE_PASSWORD}"
+        groups: [data]
+        admin: true
+
+resources:
+  analytics:
+    description: "Analytics, read only"
+    kind: clickhouse
+    upstream: "https://clickhouse.internal:8443"
+    credential:
+      basic:
+        username: bytehop_ro
+        password: "${CLICKHOUSE_READONLY_PASSWORD}"
+
+access:
+  - subjects: ["group:data"]
+    resources: [analytics]
+    max_ttl: 30m
+```
+
+## Secret 与环境变量
+
+配置支持 `${ENV_NAME}`。推荐把密码通过容器 Secret、systemd EnvironmentFile 或 Secret Manager 注入，不要把真实值提交到仓库。
+
+```bash
+export BYTEHOP_ALICE_PASSWORD='replace-me'
+export CLICKHOUSE_READONLY_PASSWORD='replace-me'
+bytehop config check --config ./bytehop.yaml
+bytehop serve --config ./bytehop.yaml
+```
+
+ByteHop v0.1 不是 Secret Vault：它读取并使用 secret，但不负责轮换、版本或托管根凭证。生产环境应给 ByteHop 专用的最小权限上游身份。
+
+## 路径与严格校验
+
+`openapi`、`ca_file`、`data_dir` 等相对路径基于 YAML 所在目录解析。配置解析会拒绝未知字段、缺失环境变量、非法 Resource、无效 TTL 和不安全的明文监听。
+
+修改后先运行：
+
+```bash
+bytehop config check --config ./bytehop.yaml
+```
+
+完整字段见 [配置参考](../reference/config)。
