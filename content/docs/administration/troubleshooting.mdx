@@ -28,7 +28,7 @@ printf '%s\n' "$BYTEHOP_PASSWORD" | \
 4. 运行 `bytehop config check` 与 `config diff`；
 5. 配置未重载时，YAML 已修改不等于运行时已生效。
 
-## `forbidden` 或跨资源调用失败
+## `permission_denied` 或跨资源调用失败
 
 Lease 只绑定一个 Resource。不要复用另一个资源的 endpoint/token；让 CLI 为目标 Resource 重新申请。若身份确实没有策略，反复重试没有意义。
 

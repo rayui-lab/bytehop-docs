@@ -1,0 +1,72 @@
+---
+title: 日常运维
+description: 处理健康检查、备份恢复、卡住请求、配置变更与版本升级。
+---
+
+ByteHop v0.1 更适合小团队单实例。日常运维的目标是让授权状态、运行请求和历史 Event 可解释，而不是假装它已经具备完整高可用平台能力。
+
+## 每日 / 每周检查
+
+- `/healthz` 正常，进程没有反复重启；
+- Resource 健康状态和上游证书有效；
+- **Sessions** 没有异常长时间 Operation；
+- **Events** 中失败率、401 / 403、上游超时是否异常；
+- `data_dir` 磁盘空间足够，SQLite 备份可读；
+- 固定上游身份仍是最小权限，未被临时扩权后遗忘；
+- 本地用户与当前团队名单一致。
+
+## 停止卡住的请求
+
+普通成员可以停止自己的 Operation，管理员可以停止任意 Operation。优先停止单个请求，不要为了一个卡住的 SQL 撤销整个成员的全部访问。
+
+ClickHouse 会先取消本地连接，再尝试按 `query_id` 结束远端查询。检查返回的 `local_cancelled`、`upstream_cancel_tried` 与 `upstream_cancelled`；“本地已取消”不等于上游一定终止。
+
+## 紧急撤销
+
+| 场景 | 动作 |
+| --- | --- |
+| 单个请求卡住 | Stop Operation |
+| 某次任务不应继续 | revoke 对应 Lease |
+| 成员设备丢失 / Session 泄露 | 删除或改密该用户并 reload |
+| Resource credential 泄露 | 先在上游轮换，再更新 Secret / Resource 并 reload |
+| 权限配置错误 | 收紧 Access，diff 后 reload，确认受影响 Lease 已撤销 |
+
+保留 request ID、query ID、actor、Resource、时间范围与操作结果，不要把 secret 写进事故记录。
+
+## 配置变更
+
+始终执行：
+
+```bash
+bytehop config check --config /etc/bytehop/bytehop.yaml
+bytehop config diff
+bytehop config reload
+```
+
+静态字段变化返回 `restart_required`，整份配置不会被部分应用。详细行为见[安全热重载](./reload)。
+
+## 备份与恢复
+
+备份：
+
+- 完整 YAML 及其版本历史；
+- OpenAPI、内部 CA 和 TLS 文件；
+- Secret 引用关系（不把明文 secret 混入普通备份）；
+- `data_dir/bytehop.db`；
+- 当前二进制、commit 与 checksum。
+
+恢复时在隔离主机验证配置与文件权限，再切换入口。进程启动会撤销上一进程遗留的 active Session 与 Lease，因此客户端重新登录是预期行为。
+
+<Callout type="warn" title="不要把单实例包装成高可用">
+  v0.1 没有多节点 Session / Lease 协调、自动 failover 或正式滚动升级协议。若无法接受重新登录或短暂停机，应先补齐这些能力，而不是直接在两个实例前放负载均衡器。
+</Callout>
+
+## 升级
+
+1. 固定新 commit 并在目标架构构建；
+2. 运行单元测试、Web build、文档 build 与 Compose smoke；
+3. 用生产配置副本运行 `config check`；
+4. 备份二进制、配置和 SQLite；
+5. 安排短维护窗口并记录回滚版本；
+6. 升级后验证登录、Resource 发现、一次允许请求、一次拒绝请求、Event 与 Stop；
+7. 向成员分发匹配版本 CLI。

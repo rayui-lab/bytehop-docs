@@ -86,6 +86,8 @@ access:
 
 必须至少有一条显式策略。subject 需要 `user:` 或 `group:` 前缀；Resource 必须已定义。省略 `max_ttl` 时使用 `default_lease_ttl`。
 
+subject 是精确匹配。规则只做叠加，没有显式 deny；同一身份对同一 Resource 匹配多条规则时采用最大的 `max_ttl`。管理员身份也必须匹配 Access policy 才能发现 Resource 或创建 Lease。
+
 ## 静态字段
 
 `listen`、`public_url`、`data_dir`、`web_dir`、内建 TLS cert/key 和 `allow_insecure_http` 变更需要重启。其余字段经过全量校验后可热重载。

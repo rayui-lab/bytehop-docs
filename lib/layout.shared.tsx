@@ -25,7 +25,7 @@ export function baseOptions(): BaseLayoutProps {
         active: "nested-url",
       },
       {
-        text: "5 分钟开始",
+        text: "开始使用",
         url: "/docs/quickstart",
         type: "button",
       },

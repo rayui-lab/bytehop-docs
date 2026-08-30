@@ -30,7 +30,7 @@ export default function HomePage() {
               href="/docs/quickstart"
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
             >
-              5 分钟跑通 <ArrowRight className="size-4" />
+              开始使用 <ArrowRight className="size-4" />
             </Link>
             <Link
               href="/docs/overview"

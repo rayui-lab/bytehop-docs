@@ -1,4 +1,4 @@
 {
   "title": "参考",
-  "pages": ["cli", "config", "api"]
+  "pages": ["cli", "config", "api", "http-behavior", "errors"]
 }

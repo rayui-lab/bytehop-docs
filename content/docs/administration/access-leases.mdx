@@ -1,11 +1,38 @@
 ---
-title: 身份、策略与 Lease
-description: 用显式 user/group 策略控制谁能为哪个 Resource 领取多长时间的 Lease。
+title: 权限模型
+description: 理解控制面角色、ByteHop Resource policy 与上游数据权限如何共同决定一次访问。
 ---
 
-v0.1 使用 YAML 本地用户。每条 Access policy 列出 subject、Resource 与最大 TTL；**没有匹配规则就是拒绝**。
+ByteHop 的权限不是一张“管理员 / 普通用户”表。一次请求要同时通过三层边界：
 
-## 按组授权
+```mermaid
+flowchart LR
+  I[本地用户与 admin 标记] -->|谁能管理和观察| C[控制面角色]
+  I -->|user / group 精确匹配| P[Resource policy]
+  P -->|签发单 Resource Lease| G[ByteHop 数据面]
+  G -->|固定服务身份| U[上游数据权限]
+```
+
+1. **控制面角色**决定能看谁的 Session、Lease、Operation、Event，以及能否重载配置；
+2. **Resource policy**决定这个身份能否发现某个 Resource、能否领取 Lease，以及最长多久；
+3. **上游权限**决定固定服务身份最终能读哪些表、索引、集合或 API。
+
+三层都要正确。`admin: true` 不会自动获得 Resource，也不会让高权限上游账号变安全。
+
+## 控制面角色
+
+| 能力 | member | admin |
+| --- | --- | --- |
+| 登录 Web / CLI | 是 | 是 |
+| 发现 Resource、创建 Lease | 仅匹配 Access policy | 仍然仅匹配 Access policy |
+| 查看 Access policy | 仅与自己匹配的部分 | 全部 |
+| 查看 Lease / Operation / Event | 仅自己的 | 全部成员 |
+| 撤销 Lease、停止 Operation | 仅自己的 | 任意成员 |
+| 配置 diff / reload | 否 | 是 |
+
+因此可以设置一个**只管理、不查生产数据**的管理员：给他 `admin: true`，但不要让其 user / group 出现在任何生产 Resource policy 中。
+
+## Resource policy
 
 ```yaml
 auth:
@@ -15,9 +42,10 @@ auth:
       "alice@example.com":
         password: "${ALICE_PASSWORD}"
         groups: [data]
-      "bob@example.com":
-        password: "${BOB_PASSWORD}"
+      "oncall@example.com":
+        password: "${ONCALL_PASSWORD}"
         groups: [operations]
+        admin: true
 
 access:
   - subjects: ["group:data"]
@@ -26,34 +54,78 @@ access:
   - subjects: ["group:operations"]
     resources: [orders-api]
     max_ttl: 10m
+  - subjects: ["user:lead@example.com"]
+    resources: [analytics]
+    max_ttl: 1h
 ```
 
-subject 使用 `group:<name>` 或 `user:<email>`。同一用户匹配多条规则时，能访问匹配到的 Resource，但申请 TTL 不能超过对应策略上限。
+当前语义是确定的：
+
+- subject 只支持 `user:<subject>` 与 `group:<name>`，均为精确匹配；
+- 没有任何匹配规则就是拒绝；
+- 规则是叠加的：一个身份可以通过多条规则获得多个 Resource；
+- 同一 Resource 同时匹配多条规则时，采用其中**最大的 `max_ttl`**；
+- 当前没有显式 `deny`，不能用后面的规则覆盖前面的允许；
+- Lease 只绑定一个 Resource，不能拿 `analytics` 的 Lease 调 `orders-api`；
+- 未填写 Lease TTL 时，实际值是 `default_lease_ttl` 与有效 policy 上限中较小的一个；
+- 显式申请超过有效上限会失败，不会静默缩短。
+
+<Callout type="warn" title="不要用宽规则再尝试排除个人">
+  由于没有显式 deny，`group:data` 已经允许的 Resource 不能再通过另一条规则禁止某个组员。需要例外时，应调整组成员关系，或拆成更精确的组与 policy。
+</Callout>
+
+## 上游数据权限
+
+ByteHop Resource policy 只决定“能不能使用这个入口”，不会解析 SQL、Elasticsearch DSL 或任意 HTTP 业务语义。真正的数据范围应由固定上游身份或受限 Bridge 落实。
+
+| Resource | 上游最小权限放在哪里 | 典型限制 |
+| --- | --- | --- |
+| ClickHouse | user / role、Settings Profile、Constraint、Quota | database / table、只读、超时、内存、并发、结果规模 |
+| Elasticsearch | role 或 API key | index pattern、read / view_index_metadata、必要的 cluster privilege |
+| MongoDB HTTP Bridge | Bridge 的服务端配置与 MongoDB 用户 | database、collection、允许操作、projection、limit、timeout |
+| 内部 HTTP API | API 自身的服务账号或专用 token | 业务动作、租户、对象范围、读写权限 |
+
+如果数据范围不同，应创建不同上游身份并配置成不同 Resource。例如 `orders-summary` 和 `orders-sensitive`，而不是给 ByteHop 一个高权限账号后期待 Agent 自律。
+
+## OpenAPI 不是授权
+
+Resource 的 OpenAPI 只用于发现操作和输入结构。v0.1 不用它做运行时 method / path allowlist。通用 HTTP 与 Elasticsearch Resource 会拒绝 `CONNECT`、`TRACE` 和协议升级，但其他普通 HTTP 方法仍会转发；ClickHouse 仅允许 `GET`、`POST`。
+
+因此：
+
+- 对已有 API，用专用上游身份限制可执行的业务动作；
+- 对 MongoDB、CLI 或脚本，用小型 Bridge 只公开少量领域操作；
+- 不要把“文档里没写这个 endpoint”当成访问控制。
+
+完整协议行为见 [HTTP 转发边界](../reference/http-behavior)。
 
 ## Lease 生命周期
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Active: 创建
-  Active --> Revoked: 用户 / 管理员撤销
-  Active --> Expired: 到期
+  [*] --> Active: policy 允许并创建
+  Active --> Revoked: 用户或管理员撤销
+  Active --> Expired: TTL 到期
   Active --> Revoked: Session 注销
-  Active --> Revoked: 权限或 Resource 发生破坏性变更
+  Active --> Revoked: 用户删除或密码变化
+  Active --> Revoked: policy 收紧或 Resource 破坏性变化
   Revoked --> [*]
   Expired --> [*]
 ```
 
-Lease 绑定创建它的身份、Session、Resource、组快照、Agent ID、Task ID 和到期时间。它不能跨 Resource 使用，也不能通过修改请求头冒充另一身份。
+Lease 绑定创建它的身份、Session、Resource、组快照、Agent ID、Task ID 和到期时间。原始 token 只在创建响应中出现一次，SQLite 只保存摘要。
 
-## 为什么不在数据库里创建临时账号
+## 修改权限时如何验证
 
-不同数据库的账号生命周期、权限与协议差异很大。ByteHop 选择让上游看到稳定的最小权限服务身份，把临时性放在网关 Lease：
+1. 修改 YAML 后运行 `bytehop config check --config ./bytehop.yaml`；
+2. 管理员运行 `bytehop config diff`，检查撤销影响；
+3. 运行 `bytehop config reload` 原子应用；
+4. 用目标成员身份运行 `bytehop resources --json`；
+5. 同时验证一个应允许的 Resource 和一个应拒绝的 Resource；
+6. 在 Web 的 **Access**、**Sessions** 与 **Events** 确认结果。
 
-- 不需要给 ByteHop 创建用户的管理员权限；
-- 不会因临时账号清理失败留下孤儿；
-- ClickHouse、ES 与 HTTP API 使用同一授权模型；
-- 代价是上游原生日志主要看到固定账号，需要用 ByteHop 的 request/query ID 关联到真实调用者。
+Access 收紧会撤销已经不再满足新 policy 的 Lease。删除用户或修改密码会撤销其 Session 与派生 Lease。更多操作见[成员生命周期](./member-lifecycle)和[安全热重载](./reload)。
 
-## 身份变更
-
-从 YAML 删除用户会禁用对应身份，并撤销其活动 Session 与 Lease。之后即使重新加入同名用户，旧 token 也不会恢复。密码变更同样要求旧会话失效。
+<Callout title="当前身份边界">
+  v0.1 只支持 YAML 本地用户，还没有 OIDC、飞书登录、SCIM 或自动化用户目录同步。每位成员仍应使用独立账号；不要把共享账号当成暂时的团队便利。
+</Callout>

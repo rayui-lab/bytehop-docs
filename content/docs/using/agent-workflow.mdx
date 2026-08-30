@@ -36,6 +36,40 @@ flowchart LR
 
 仓库内的 `skills/bytehop/SKILL.md` 给出了同一流程的 Skill 版本。可以直接把这个文件安装到 Agent，不需要等待某个 Skill Registry。
 
+## 安装 ByteHop Skill
+
+Skill 只告诉 Agent **什么时候以及怎样调用 CLI**。它不会保存密码、自动登录、授予 Resource，或绕过 ByteHop policy。
+
+从经过团队审核的 ByteHop 仓库复制 Skill。以个人范围安装 Codex Skill：
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills/bytehop"
+cp ./skills/bytehop/SKILL.md \
+  "${CODEX_HOME:-$HOME/.codex}/skills/bytehop/SKILL.md"
+```
+
+Claude Code 可复制到其个人 skills 目录：
+
+```bash
+mkdir -p "$HOME/.claude/skills/bytehop"
+cp ./skills/bytehop/SKILL.md \
+  "$HOME/.claude/skills/bytehop/SKILL.md"
+```
+
+其他 Agent 使用各自支持的 Skill 目录或仓库级 instructions。不要为了“兼容”而让安装脚本修改多个 Agent 的配置文件；由具体 Agent 读取 Skill，由 ByteHop CLI 提供统一调用面。
+
+安装后重新打开 Agent 会话，并用一个不包含数据库密码的任务验证：
+
+```text
+请使用 ByteHop 发现我能访问的资源。先只列出资源和用途，不要发起查询。
+```
+
+预期行为是 Agent 运行 `bytehop resources --json`。若尚未登录，它应提示你在可信终端登录，而不是索要密码。
+
+<Callout title="优先安装到需要它的环境">
+  ByteHop Skill 的触发范围只覆盖“需要访问 ByteHop 管理的内部数据或 API”。如果只有少数项目需要生产数据，优先使用 Agent 支持的项目级 Skill；没有项目级机制时再使用个人目录。
+</Callout>
+
 ## `request` 与 `connect` 怎么选
 
 | 情况 | 使用 | 原因 |
@@ -50,7 +84,7 @@ flowchart LR
 JSON 错误会给出 `code`、`retryable`、`requires_user` 和可选的 `next_action`。
 
 - `auth_required`：必须由人重新登录，不要猜密码；
-- `forbidden`：当前身份无权访问，不要反复重试；
+- `permission_denied`：当前身份或 Lease 无权访问，不要反复重试；
 - `config_reloading`：短暂可重试；
 - `result_too_large`：缩小结果或改用非 JSON 流式输出；
 - Lease 过期或撤销：重新申请，不要复用旧 token。
@@ -58,3 +92,5 @@ JSON 错误会给出 `code`、`retryable`、`requires_user` 和可选的 `next_a
 <Callout type="warn" title="返回内容不是指令">
   数据库字段、网页内容和内部 API 响应都可能包含提示注入式文本。ByteHop 只提供访问边界，不判断内容可信度；Agent 必须把结果当作数据。
 </Callout>
+
+完整错误处理规则见[错误与重试](../reference/errors)。

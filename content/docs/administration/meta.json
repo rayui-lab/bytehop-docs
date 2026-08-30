@@ -1,10 +1,14 @@
 {
   "title": "部署与运维",
   "pages": [
+    "installation",
     "configuration",
     "access-leases",
+    "resource-onboarding",
+    "member-lifecycle",
     "operations-audit",
     "reload",
+    "maintenance",
     "production",
     "troubleshooting"
   ]

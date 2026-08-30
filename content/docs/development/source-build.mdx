@@ -1,0 +1,50 @@
+---
+title: 从源码构建
+description: 构建 ByteHop 服务端、CLI 和内嵌 Web UI，并运行基础检查。
+---
+
+这一节面向 ByteHop 的维护者。普通成员从[第一次使用](../quickstart)开始即可。
+
+## 环境要求
+
+- Go 1.26；
+- Bun 1.4；
+- 运行集成验收时还需要 Docker 与 Docker Compose。
+
+## 构建
+
+在源码根目录运行：
+
+```bash
+make build
+./bin/bytehop version
+```
+
+`make build` 先构建 Web UI，再将静态资源嵌入同一个 Go 二进制。`bin/bytehop` 同时包含服务端和 CLI。
+
+## 基础检查
+
+```bash
+make check
+make docs-build
+```
+
+如果只改 Go 代码或 Web UI，也可以分别运行：
+
+```bash
+go test ./...
+go vet ./...
+(cd web && bun run typecheck && bun run build)
+```
+
+## 版本化分发
+
+v0.1 还没有正式 Release 管道。团队内部交付时至少应：
+
+1. 固定源码 commit，不使用未记录的工作区构建；
+2. 在目标操作系统与 CPU 架构上构建；
+3. 生成并一起公布 SHA-256；
+4. 服务端与 CLI 使用同一个已验证版本；
+5. 在升级前阅读配置 diff 与当前限制。
+
+完成本地构建后，继续运行[本地验收环境](./local-stack)。

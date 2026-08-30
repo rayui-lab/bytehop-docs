@@ -1,0 +1,75 @@
+---
+title: HTTP 转发边界
+description: ByteHop v0.1 数据面的 method、path、header、redirect、凭证注入与审计行为。
+---
+
+ByteHop 的数据面是 HTTP 反向代理，不是通用 TCP 隧道。客户端用绑定单个 Resource 的 Lease 调用：
+
+```text
+<METHOD> /proxy/{resource}/{path...}
+Authorization: Bearer <lease-token>
+```
+
+CLI 的 `request` 与 `connect` 都建立在这条边界上。
+
+## Method 与协议
+
+| Resource kind | 运行时 method 规则 |
+| --- | --- |
+| `clickhouse` | 只接受 `GET`、`POST` |
+| `elasticsearch` | 转发普通 HTTP method |
+| `http` | 转发普通 HTTP method |
+| 所有 kind | 拒绝 `CONNECT`、`TRACE` 和 HTTP protocol upgrade |
+
+v0.1 **没有通用的 per-Resource method / path allowlist**。OpenAPI 仅用于操作发现，不参与运行时授权。对通用 HTTP / Elasticsearch 的业务边界必须由专用上游身份落实；需要更窄操作面时，在上游前部署受限 HTTP Bridge。
+
+## Path 与 query
+
+- Resource 的 `upstream` 可以包含 base path；客户端 path 会安全拼接到其后；
+- Lease 必须与 URL 中的 Resource 完全一致；
+- 非法转义和不能安全归一化的 path 会被拒绝；
+- 普通 Resource 的 query string 会转发；
+- ClickHouse 会移除客户端提供的 `user`、`password`、`query_id`、session、role、quota 和 log comment 等身份 / 关联参数，再写入 ByteHop 生成的 `query_id`。
+
+## Header 与凭证
+
+ByteHop 不透传客户端提供的敏感或代理控制 header，包括：
+
+- `Authorization`、Cookie；
+- `X-ByteHop-*`、Forwarded 系列；
+- Elasticsearch run-as / secondary authorization；
+- ClickHouse 用户身份 header；
+- hop-by-hop、Host 与 method / URL override header。
+
+随后由服务端 Resource 配置注入 Basic、Bearer、API key、自定义 Header 与可选附加 Header。客户端不能覆盖这些固定身份。
+
+上游响应中的 `Set-Cookie` 和伪造的 `X-ByteHop-*` 不会回传。可信的 `X-ByteHop-Request-Id` 由网关生成；ClickHouse 还返回 `X-ByteHop-Query-Id`。
+
+## Redirect
+
+CLI 不自动跟随 redirect，避免把 Lease token 或请求体重放到其他 origin。
+
+- 同 origin 且仍位于当前 Resource base path 内的 `Location` 会改写回 ByteHop proxy path；
+- 外部 origin 或越界 redirect 会被移除并标记为 blocked；
+- 调用方必须显式判断结果，不应自行把认证 header 带到新地址。
+
+## 请求与响应
+
+- Lease 的到期时间也是请求的最晚执行边界；到期或撤销会取消受控请求；
+- `request` 默认流式输出响应；`request --json` 为统一 envelope 缓冲有限响应；
+- JSON 超过 `max_json_result_bytes` 时返回 `result_too_large`，不会静默截断；
+- CLI 的大请求体应改用 `connect` 配合现有流式 HTTP client；
+- ByteHop 不记录通用请求体、响应体、header 或 credential。
+
+ClickHouse 是例外：Event 会保存有界 SQL 与截断标记，但 `INSERT ... FORMAT` 的数据区不会保存。详情见[运行中操作与 Event](../administration/operations-audit)。
+
+## OpenAPI 能做什么
+
+配置 `openapi` 后，`bytehop resources <name> --json` 会返回操作摘要和输入结构，帮助 Agent 少猜 endpoint。它不是 WAF、schema validation 或 authorization engine。
+
+需要运行时限制时，优先级是：
+
+1. 上游最小权限身份；
+2. 领域化 Bridge；
+3. 网络边界与配额；
+4. 未来再评估 ByteHop method / path policy。

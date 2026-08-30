@@ -1,0 +1,79 @@
+---
+title: 本地验收环境
+description: 用 Docker Compose 启动 ByteHop、真实数据源和确定性测试数据，验证完整链路。
+---
+
+这一页是**开发者集成测试**，不是普通用户的安装流程。环境会创建演示账号、演示数据和 HTTP 明文入口，不能直接作为生产配置。
+
+## 前置条件
+
+- Docker 与 Docker Compose；
+- `curl`、`jq`；
+- 运行 Agent 验收时需要 Go 与 Bun。
+
+## 启动完整环境
+
+在 ByteHop 源码根目录运行：
+
+```bash
+docker compose up --build --wait
+```
+
+默认入口是 `http://localhost:8443`。演示环境同时启动：
+
+- `dev-clickhouse`：含 `bytehop_demo.events` 示例表；
+- `dev-elasticsearch`：含 `bytehop-orders` 示例索引；
+- `dev-mongo-users`：真实 MongoDB 后面的受限 HTTP Bridge；
+- `dev-http-api`：模拟需要 Basic + Cookie 的内部 API。
+
+## 运行闭环验证
+
+```bash
+./deploy/dev/smoke.sh
+```
+
+脚本会实际登录、发现资源、申请 Lease、查询三种数据源、验证跨资源隔离，并检查 ClickHouse 查询记录与停止能力。
+
+如果本机已安装 Go 与 Bun，再运行 Agent 视角的验证：
+
+```bash
+make agent-smoke
+```
+
+它按 ByteHop Skill 的流程验证发现、读取 contract、调用 Resource、`connect` capability path，以及指令式上游文本仍只作为数据处理。
+
+## 手动查询
+
+```bash
+make build
+
+printf '%s\n' 'bytehop-dev-password' | \
+  ./bin/bytehop login http://localhost:8443 \
+  --user alice@example.com --password-stdin
+
+printf '%s' \
+  'SELECT service, count() AS events FROM bytehop_demo.events GROUP BY service ORDER BY service FORMAT JSON' | \
+  ./bin/bytehop request dev-clickhouse POST / \
+  --body @- --content-type text/plain --json \
+  --agent-id codex --task-id local-stack
+```
+
+打开 [http://localhost:8443](http://localhost:8443) 可以验证 Resource、Lease、Event、运行中 SQL 与配置重载界面。
+
+## 停止环境
+
+```bash
+docker compose down
+```
+
+只有明确不再需要演示数据时才运行：
+
+```bash
+docker compose down --volumes
+```
+
+它会永久删除这个 Compose 项目的本地数据库卷。
+
+<Callout type="warn" title="验收栈不是生产模板">
+  Compose 中的密码和明文入口只供本机测试。生产部署需要 HTTPS、独立用户、外部注入 Secret、上游最小权限身份、持久化备份与受控网络边界。
+</Callout>

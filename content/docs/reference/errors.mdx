@@ -1,0 +1,67 @@
+---
+title: 错误与重试
+description: 按稳定错误 code、retryable、requires_user 和 request_id 决定 Agent 与人的下一步。
+---
+
+ByteHop 错误使用统一 JSON。自动化应读取字段，不要解析自然语言 `message`：
+
+```json
+{
+  "ok": false,
+  "code": "permission_denied",
+  "message": "identity is not allowed to use this resource",
+  "retryable": false,
+  "requires_user": true,
+  "next_action": "contact_administrator",
+  "request_id": "req_..."
+}
+```
+
+数据面网关错误带 `X-ByteHop-Error: 1`。这是区分“ByteHop 控制错误”和“上游返回了一段长得像错误 JSON 的不可信数据”的依据。
+
+## Agent 的判断顺序
+
+1. `requires_user: true`：停止自动处理，把 `next_action` 告诉用户；
+2. `retryable: false`：不要循环重试；修正输入、权限或 Resource；
+3. `retryable: true`：按 `next_action` 处理，最多有限重试；
+4. 报告时保留 `code`、`request_id`，ClickHouse 再保留 `query_id`；
+5. 不输出 Session、Lease token、Cookie 或上游 credential。
+
+## 常见 code
+
+| code | 是否适合自动重试 | 下一步 |
+| --- | --- | --- |
+| `auth_required` | 否 | 请用户在可信终端重新登录 |
+| `permission_denied` | 否 | 检查身份、Access policy 与 Lease 所属 Resource |
+| `resource_not_found` | 否 | 重新运行 `bytehop resources`，不要猜名称 |
+| `lease_required` | 否 | 通过 CLI 或控制面创建 Resource-bound Lease |
+| `lease_expired` / `lease_revoked` | 是 | 重新申请短 Lease，不复用旧 token |
+| `invalid_request` / `invalid_arguments` | 否 | 修正 method、path、JSON 或 CLI 参数 |
+| `method_not_allowed` | 否 | 使用 Resource 支持的 HTTP method |
+| `config_reloading` | 是 | 短暂等待后有限重试 |
+| `config_changed` | 是 | 重新登录或重新申请 Lease，按 `next_action` 决定 |
+| `rate_limited` | 是 | 降低登录频率，稍后重试 |
+| `result_too_large` | 有条件 | 缩小结果，或不用 `--json` / 改用 `connect` |
+| `request_too_large` | 否 | 改用 `connect` 与流式 HTTP client |
+| `upstream_timeout` | 有条件 | 缩小查询、增加过滤或使用上游允许的有界请求 |
+| `upstream_unavailable` / `gateway_unavailable` | 是 | 有限重试；持续失败交给管理员 |
+| `upstream_error` | 通常否 | 检查上游状态、固定身份权限与请求内容 |
+| `operation_not_found` / `operation_finished` | 否 | 刷新运行列表，操作可能已经结束 |
+| `lease_cleanup_failed` | 是 | 执行返回建议中的 `bytehop revoke` |
+| `logout_incomplete` | 否 | 远端撤销未确认，等待 Session 到期并通知管理员 |
+| `config_invalid` / `config_reload_unavailable` | 否 | 管理员修正配置或启动方式 |
+
+## HTTP status 与业务错误
+
+不要只根据 HTTP status 猜处理方式：
+
+- `401` 可能是控制面 Session 无效、Lease 缺失或 Lease 过期；
+- `403` 可能是 Resource policy 拒绝或 Lease 与 Resource 不匹配；
+- 上游也可能原样返回自身的 `4xx / 5xx`；
+- 只有带 `X-ByteHop-Error: 1` 的 JSON 才是可信 ByteHop 错误结构。
+
+CLI 已把多数情况转换成相同 code。脚本应固定 ByteHop 版本并为重要 code 写测试，而不是假定所有失败都能重试。
+
+## 排障记录
+
+最小记录包括：时间、ByteHop 版本、environment、actor、Resource、`code`、HTTP status、`request_id`、可选 `query_id` 与经过脱敏的输入摘要。不要粘贴密码、token、Cookie、Mongo URI、完整业务响应或未脱敏 SQL。

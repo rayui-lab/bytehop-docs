@@ -1,0 +1,80 @@
+---
+title: 安装 ByteHop
+description: 从固定源码版本构建并部署单实例 ByteHop，向团队分发匹配版本的 CLI。
+---
+
+ByteHop v0.1 目前以源码交付：仓库还没有官方 Release 二进制、安装脚本、容器镜像仓库或包管理器渠道。普通成员不应该运行 Compose 验收栈；管理员应构建一次、部署一次，再分发已校验的 CLI。
+
+## 需要准备
+
+- 一台能访问上游数据库 / API、但不直接暴露公网的 Linux 主机；
+- Go 1.26 与 Bun 1.4 构建环境；
+- 一个 HTTPS 域名，或可信反向代理；
+- ByteHop YAML、外部注入的 Secret 和持久化数据目录；
+- 数据库 / API 管理员预先创建的固定最小权限身份。
+
+## 1. 固定并构建版本
+
+```bash
+git checkout <reviewed-commit>
+make check
+make build
+./bin/bytehop version
+sha256sum ./bin/bytehop
+```
+
+macOS 可以用 `shasum -a 256`。记录 commit、构建平台、版本输出和 checksum。不要用未记录的工作区产物覆盖正在运行的服务。
+
+## 2. 准备配置
+
+从仓库的 `examples/bytehop.yaml` 开始，至少替换：
+
+- `server.public_url`、监听地址与 TLS；
+- 每位成员的独立本地账号与组；
+- Resource 的上游地址和固定身份；
+- 显式 Access policy；
+- `data_dir` 持久化路径。
+
+所有 secret 使用 `${ENV_NAME}` 引用，由 systemd、容器 Secret 或现有 Secret Manager 注入。
+
+```bash
+bytehop config check --config /etc/bytehop/bytehop.yaml
+```
+
+## 3. 启动单实例
+
+```bash
+bytehop serve --config /etc/bytehop/bytehop.yaml
+```
+
+用进程管理器设置专用非 root 用户、自动重启、只读配置与可写数据目录。健康检查：
+
+```bash
+bytehop healthcheck https://bytehop.example.com/healthz
+```
+
+如果在反向代理终止 TLS，ByteHop 只应监听受控内网；不要让后端明文端口同时暴露给办公网或公网。完整检查见[生产部署清单](./production)。
+
+## 4. 分发 CLI
+
+`bytehop` 同一二进制也包含 CLI。为成员的平台单独构建，放在团队现有可信软件分发渠道，并同时公布 SHA-256。成员安装后先运行：
+
+```bash
+bytehop version
+```
+
+服务端与 CLI 应固定为同一已验证版本。当前 API 尚未承诺跨大版本兼容。
+
+## 5. 完成首个接入
+
+按以下顺序继续：
+
+1. [接入 Resource](./resource-onboarding)；
+2. [权限模型](./access-leases)；
+3. [成员生命周期](./member-lifecycle)；
+4. 让成员按[第一次使用](../quickstart)完成登录与查询；
+5. 在 **Events** 确认调用者、Resource、request ID 与结果状态。
+
+<Callout type="warn" title="许可证仍需明确">
+  当前仓库尚未提供 License 文件。在许可证明确前，不要假定可以公开再分发构建物或镜像；团队内部使用也应先确认组织要求。
+</Callout>

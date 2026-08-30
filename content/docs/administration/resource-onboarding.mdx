@@ -1,0 +1,84 @@
+---
+title: 接入 Resource
+description: 从最小权限上游身份开始，把一个数据库或内部 API 安全接入 ByteHop。
+---
+
+接入 Resource 的顺序应是“先定义数据边界，再配置网关”，不是先把管理员凭证填进 YAML。
+
+## 1. 定义最小能力
+
+先写清楚：
+
+- 哪个团队任务需要它；
+- 允许读哪些数据库、表、索引、集合或业务对象；
+- 是否真的需要写操作；
+- 预期最长查询时间、结果规模和并发；
+- 需要哪些人或组；
+- 哪个系统负责最终授权。
+
+如果一段描述里出现两种明显不同的数据范围，拆成两个 Resource。
+
+## 2. 创建固定上游身份
+
+在上游系统创建专用身份，不复用个人账号，也不给 ByteHop 创建用户或管理员权限。
+
+| 类型 | 优先落实 |
+| --- | --- |
+| ClickHouse | database / table grant、readonly、超时、内存、并发、Quota |
+| Elasticsearch | 精确 index pattern 与只读 index privilege，避免宽 cluster privilege |
+| MongoDB Bridge | Bridge 专用 token；Mongo 用户固定 database / collection 与只读角色 |
+| HTTP API | 专用 service account / token，只允许目标租户和业务动作 |
+
+针对每种协议的配置示例见 [ClickHouse](../resources/clickhouse)、[Elasticsearch](../resources/elasticsearch)和[HTTP API 与 Bridge](../resources/http-bridge)。
+
+## 3. 添加 Resource
+
+```yaml
+resources:
+  analytics:
+    description: "Production analytics, read only"
+    kind: clickhouse
+    upstream: "https://clickhouse.internal:8443"
+    credential:
+      basic:
+        username: bytehop_ro
+        password: "${CLICKHOUSE_READONLY_PASSWORD}"
+    tls:
+      ca_file: "./certs/internal-ca.pem"
+      server_name: "clickhouse.internal"
+```
+
+Resource 名是 Agent 会使用的稳定标识。描述应说明用途和边界，例如“订单汇总，只读”，不要只写“生产库”。
+
+## 4. 添加最小 Access policy
+
+```yaml
+access:
+  - subjects: ["group:data"]
+    resources: [analytics]
+    max_ttl: 15m
+```
+
+先授权给小范围试用组。管理员不会自动绕过这条 policy；若管理员也要真实查询，必须显式授权。
+
+## 5. 检查、预览与应用
+
+```bash
+bytehop config check --config /etc/bytehop/bytehop.yaml
+bytehop config diff
+bytehop config reload
+```
+
+如果 diff 显示 `restart_required`，不要尝试部分应用。按[安全热重载](./reload)处理。
+
+## 6. 验收正反两条路径
+
+- 目标成员能在 `bytehop resources` 中发现 Resource；
+- 未授权成员不能发现它，也不能创建 Lease；
+- 一个其他 Resource 的 Lease 不能调用它；
+- 固定身份在上游确实无法越界读写；
+- CLI / Web / Event 中不出现上游 credential；
+- 对 ClickHouse，长查询观察与停止结果符合上游账号权限；
+- 对 HTTP Bridge，越界 method、collection、projection 或 limit 在 Bridge / 上游被拒绝。
+
+最后保留 `request_id`、可选 `query_id` 和脱敏后的验收记录。
