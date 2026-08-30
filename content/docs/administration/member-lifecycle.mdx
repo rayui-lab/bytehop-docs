@@ -1,18 +1,18 @@
 ---
-title: 成员生命周期
-description: 在只支持本地用户的 v0.1 中，安全地新增、调整和移除团队成员。
+title: 用户管理
+description: 在使用本地身份的 v0.1 中，新增用户、调整用户组、修改密码和停用账号。
 ---
 
-v0.1 使用 YAML 管理用户目录。管理员通过同一份配置完成入职、转组、密码变更和离职流程。
+v0.1 使用 YAML 管理用户目录。管理员通过同一份配置新增用户、调整用户组、修改密码或停用账号；每个用户应使用独立 subject，避免多人共享同一个 ByteHop 身份。
 
-## 新增成员
+## 新增用户
 
-1. 为成员创建独立 subject，不共用账号；
+1. 为用户创建独立 subject，不共用账号；
 2. 从 Secret 渠道注入初始随机密码；
 3. 只加入完成工作所需的组；
 4. 检查组对应的 Resource 与最大 TTL；
 5. `config check`、`config diff`、`config reload`；
-6. 让成员按[第一次使用](../quickstart)登录并验证可见 Resource；
+6. 让用户按[第一次使用](/docs/quickstart)登录并验证可见 Resource；
 7. 同时验证一个不应可见的 Resource。
 
 ```yaml
@@ -30,23 +30,23 @@ auth:
 
 先用 `bytehop config diff` 查看影响，再应用完整配置。组收紧会撤销不再满足 policy 的活动 Lease。`admin` 只改变控制面权限；它不授予任何 Resource。
 
-需要临时扩大访问范围时，优先增加一个有明确结束时间的组变更和较短 `max_ttl`，并在任务结束后删除。ByteHop 当前不会自动到期用户组，管理员需要在变更流程中跟踪回收。
+需要临时扩大访问范围时，优先增加一个有明确结束时间的组变更和较短 `max_ttl`，并在任务结束后删除。ByteHop 当前不会自动让用户组关系到期，因此这项配置变化仍需由现有变更流程跟踪。
 
 ## 修改密码
 
-修改 YAML 引用的密码 Secret 并 reload。密码变化会撤销该用户已有 Session 与 Lease，成员需要重新登录。
+修改 YAML 引用的密码 Secret 并 reload。密码变化会使该用户已有 Session 与 Lease 失效，用户需要重新登录。
 
-不要通过聊天发送真实密码。使用团队现有的 Secret 分发渠道，并要求成员只在可信终端输入。
+不要通过聊天发送真实密码。使用现有的 Secret 分发渠道，并要求用户只在可信终端输入。
 
-## 移除成员
+## 停用或移除用户
 
 从 YAML 删除用户并 reload。ByteHop 会禁用对应 identity，并撤销其活动 Session 与 Lease；同名用户以后重新加入时，旧 token 不会恢复。
 
-离职 / 紧急回收清单：
+账号停用检查清单：
 
 - [ ] 从 YAML 用户目录删除 subject；
 - [ ] 预览并应用 reload；
 - [ ] 在 **Sessions** 确认无活动 Lease / Operation；
-- [ ] 轮换该成员可能在 ByteHop 之外接触过的 secret；
+- [ ] 轮换该用户可能在 ByteHop 之外接触过的 secret；
 - [ ] 检查近期 Event，保留 request ID 作为交接记录；
-- [ ] 以服务端 Session 与 Lease 的撤销结果作为权限回收依据。
+- [ ] 以服务端 Session 与 Lease 的状态作为停用是否完成的依据。

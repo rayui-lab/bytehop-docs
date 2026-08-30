@@ -5,6 +5,13 @@ description: 先检查、再预览差异，最后原子应用可以在线修改�
 
 ByteHop 从启动时使用的同一 YAML 路径重读配置。`diff` 和 `reload` 不上传 YAML，因此 secret 不会经过控制 API。
 
+使用 ByteHop Skill 时，可以让 Agent 完成 `check` 和 `diff`，但建议把实际 `reload` 保留为明确指令：
+
+```text
+请使用 ByteHop Skill 校验当前配置并解释 config diff。
+不要执行 reload，等我确认影响后再应用。
+```
+
 ## 推荐流程
 
 ```bash

@@ -7,14 +7,14 @@ ByteHop 把“正在运行”和“已经发生”分开处理：Operation 是�
 
 ## Operation
 
-运行中列表包含：
+所有经过当前 ByteHop 进程、尚未结束的数据面请求都会形成 Operation。运行中列表包含：
 
 - `request_id`、Lease、Resource 与 Resource kind；
-- actor、Agent ID、Task ID 与 client type；
+- actor、Agent ID、Task ID、来源平台、来源用户与 client type；
 - 规范化命令摘要、ClickHouse query ID；
 - 开始时间、运行时长与是否可停止。
 
-停止一个请求不会撤销整个 Lease。对于 ClickHouse，ByteHop 先取消本地上游请求，再尝试按 `query_id` 结束远端查询，并把两步结果分别返回。
+停止一个请求不会撤销整个 Lease。通用 HTTP、Elasticsearch 和 Bridge 请求会取消网关到上游的当前请求；对于 ClickHouse，ByteHop 还会尝试按 `query_id` 结束远端查询，并把本地取消与远端结果分别返回。
 
 <Callout title="观察范围是刻意有限的">
   ByteHop 只展示自己当前进程发起的 Operation，不扫描数据库里由其他客户端创建的查询。这样避免把网关变成全库管理控制台。
@@ -26,7 +26,7 @@ ByteHop 把“正在运行”和“已经发生”分开处理：Operation 是�
 
 | 类别 | 字段示例 |
 | --- | --- |
-| 归属 | actor、agent_id、task_id、client_type、client_ip |
+| 归属 | actor、agent_id、task_id、source_platform、source_user_id、client_type、client_ip |
 | 能力 | resource、lease_id、session_id |
 | 请求 | request_id、query_id、method、规范化 path |
 | 结果 | status、duration、request / response bytes、error code |
@@ -36,9 +36,26 @@ ByteHop 把“正在运行”和“已经发生”分开处理：Operation 是�
 
 ## 真实排障示例
 
-一位成员发现 Agent 查询长时间没有返回。管理员在 **Sessions** 按 actor 找到运行 90 秒的 SQL，记录 `request_id` 与 `query_id` 后停止单个 Operation。查询消失后，在 **Events** 中确认取消结果和耗时；成员仍可使用原 Lease 发起更小的聚合查询。
+一位用户发现 Agent 查询长时间没有返回。管理员在 **Sessions** 按 actor 找到运行 90 秒的 SQL，记录 `request_id` 与 `query_id` 后停止单个 Operation。查询消失后，在 **Events** 中确认取消结果和耗时；该用户仍可使用原 Lease 发起更小的聚合查询。
 
-这个流程比直接共享数据库管理员账号更容易归属，也避免为停止一次查询撤销该成员的全部访问。
+这个流程比直接共享数据库管理员账号更容易归属，也避免为停止一次查询而使该用户的整个 Lease 失效。
+
+如果请求来自飞书中的 Hermes，会话链可以进一步还原为：
+
+```text
+ByteHop actor
+  → Hermes agent_id
+  → Hermes task_id
+  → Feishu source_user_id
+  → Lease
+  → request_id / query_id / SQL
+```
+
+在 Web 中打开 **Events**，可以直接搜索 `request_id`、Hermes Session ID、飞书用户 ID、Agent、SQL 或 `query_id`。搜索由服务端查询全部历史 Event，不要求先加载旧页面。打开结果可查看完整 Task ID 和来源字段；普通用户在 **My activity** 使用相同方式搜索自己的记录。
+
+需要自动化时，可以使用 `GET /api/v1/activity` 的 `agent_id`、`task_id`、`source_platform` 和 `source_user_id` 参数做精确筛选，也可以用 `search` 做跨字段检索。来源字段是客户端上报的关联信息，不应被解释为 ByteHop 已验证的用户身份。`source_user_id` 可能是稳定的平台用户标识，应按个人数据管理其访问和保留周期。
+
+Hermes 的完整使用和验证步骤见[在 Hermes 与飞书中使用](/docs/using/hermes)。
 
 ## 数据保留
 

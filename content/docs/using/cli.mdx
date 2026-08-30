@@ -5,6 +5,10 @@ description: 登录、发现资源、发起请求、连接现有 HTTP 工具和�
 
 CLI 面向人、Agent 和自动化脚本。命令默认输出简洁的人类文本；需要机器读取时统一加 `--json`。
 
+<Callout title="Agent 优先安装 ByteHop Skill">
+  人可以直接使用下面的命令。Codex、Claude 等 Agent 应安装 [ByteHop Skill](/docs/using/agent-workflow)，由 Skill 根据任务选择命令、读取 Resource 调用说明并处理错误，不需要在每次对话中重写这些规则。
+</Callout>
+
 ## 登录与退出
 
 ```bash
@@ -67,4 +71,4 @@ bytehop revoke lea_0123456789abcdef0123456789abcdef
 
 正常的 `request` 与 `connect` 会自动清理。`revoke` 主要用于提前终止 UI / `status` 中看到的 Lease，或处理异常退出留下的访问。
 
-完整参数见 [CLI 命令参考](../reference/cli)。
+完整参数见 [CLI 命令参考](/docs/reference/cli)。

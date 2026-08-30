@@ -61,7 +61,7 @@ CLI 不自动跟随 redirect，避免把 Lease token 或请求体重放到其他
 - CLI 的大请求体应改用 `connect` 配合现有流式 HTTP client；
 - ByteHop 不记录通用请求体、响应体、header 或 credential。
 
-ClickHouse 是例外：Event 会保存有界 SQL 与截断标记，但 `INSERT ... FORMAT` 的数据区不会保存。详情见[运行中操作与 Event](../administration/operations-audit)。
+ClickHouse 是例外：Event 会保存有界 SQL 与截断标记，但 `INSERT ... FORMAT` 的数据区不会保存。详情见[运行中操作与 Event](/docs/administration/operations-audit)。
 
 ## OpenAPI 能做什么
 

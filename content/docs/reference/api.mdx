@@ -28,14 +28,14 @@ Session token 不能直接代理 Resource；一个 Resource 的 Lease 也不能�
 | `GET` | `/api/v1/auth/session` | 当前身份与到期时间 |
 | `POST` | `/api/v1/auth/logout` | 撤销当前 Session 与派生 Lease |
 | `GET` | `/api/v1/resources` | 当前身份可发现的 Resource |
-| `GET` | `/api/v1/resources/{name}` | Resource contract |
+| `GET` | `/api/v1/resources/{name}` | Resource 调用说明（contract） |
 | `GET` | `/api/v1/access` | 当前可见策略；admin 可见全部 |
 | `POST` | `/api/v1/leases` | 创建 Resource-bound Lease |
 | `GET` | `/api/v1/leases` | 当前可见 Lease 与活动请求 |
 | `POST` | `/api/v1/leases/{id}/revoke` | 撤销 Lease |
 | `GET` | `/api/v1/operations` | 当前运行 Operation |
 | `POST` | `/api/v1/operations/{id}/cancel` | 停止单个请求 |
-| `GET` | `/api/v1/activity` | 分页 Event；支持 `resource`、`limit`、`cursor` |
+| `GET` | `/api/v1/activity` | 分页 Event；支持 `resource`、Agent / Task / 来源筛选、`limit`、`cursor` |
 | `POST` | `/api/v1/admin/config/reload` | admin 配置 diff / reload |
 
 创建 Lease：
@@ -44,13 +44,29 @@ Session token 不能直接代理 Resource；一个 Resource 的 Lease 也不能�
 {
   "resource": "analytics",
   "ttl_seconds": 300,
-  "agent_id": "codex",
-  "task_id": "investigate-incident",
+  "agent_id": "hermes",
+  "task_id": "20260831_112233_d4e5f6",
+  "source_platform": "feishu",
+  "source_user_id": "ou_xxx",
   "client_type": "custom-client"
 }
 ```
 
-响应中的原始 Lease token 只出现这一次。客户端不应记录或持久化超过实际任务需要的时间。
+`agent_id`、`task_id`、`source_platform` 与 `source_user_id` 会作为不可变关联信息进入 Lease、运行中 Operation 和 Event，但不参与授权。响应中的原始 Lease token 只出现这一次。客户端不应记录或持久化超过实际任务需要的时间。
+
+Event 可按来源精确查询：
+
+```text
+GET /api/v1/activity?agent_id=hermes&task_id=<session>&source_platform=feishu&source_user_id=<user>
+```
+
+Web 使用 `search` 在全部历史 Event 中检索 Actor、Agent、Task ID、来源平台、来源用户、Resource、request / query ID、path 和 SQL：
+
+```http
+GET /api/v1/activity?search=<session-or-request-id>
+```
+
+普通用户的查询仍然只返回自己的 Event；管理员可以查询当前实例中的全部记录。
 
 配置预览使用 `{"dry_run":true}`，应用使用 `{"dry_run":false}`。
 
@@ -81,4 +97,4 @@ ByteHop 验证 Lease 与 path 中 Resource 一致，剥离客户端敏感 / 代�
 
 SDK 或第三方集成应固定经过验证的 ByteHop 版本，并覆盖错误 code 与 Lease 清理测试。
 
-完整规则见 [HTTP 转发规则](./http-behavior)，错误处理见[错误与重试](./errors)。
+完整规则见 [HTTP 转发规则](/docs/reference/http-behavior)，错误处理见[错误与重试](/docs/reference/errors)。

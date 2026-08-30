@@ -5,6 +5,14 @@ description: 通过 Elasticsearch HTTP API 搜索索引，并把固定 API 身�
 
 Elasticsearch 的 REST API 可以直接作为 ByteHop HTTP 数据面。建议为不同索引范围创建不同 role / API key，再映射成不同 Resource。
 
+安装 ByteHop Skill 后，可以让 Agent 按相同流程接入：
+
+```text
+请使用 ByteHop Skill 接入订单 Elasticsearch。
+Resource 只用于只读检索。先确认上游地址、固定身份的 Secret 环境变量名、
+允许的组和 Lease 上限；修改后运行 config check 并展示 diff，不要直接 reload。
+```
+
 ## 配置
 
 使用 Bearer token：
@@ -29,6 +37,8 @@ credential:
 ```
 
 ## 发起搜索
+
+日常使用时可以直接向安装了 Skill 的 Agent 描述检索目标。下面的 CLI 示例用于理解或人工排障。
 
 ```bash
 printf '%s' '{"query":{"term":{"status":"paid"}},"size":10}' | \

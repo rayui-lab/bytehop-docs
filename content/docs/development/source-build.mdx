@@ -3,7 +3,7 @@ title: 从源码构建
 description: 构建 ByteHop 服务端、CLI 和内嵌 Web UI，并运行基础检查。
 ---
 
-这一节面向 ByteHop 的维护者。普通成员从[第一次使用](../quickstart)开始即可。
+这一节面向 ByteHop 的维护者。使用已经部署好的实例时，从[第一次使用](/docs/quickstart)开始即可。
 
 ## 环境要求
 
@@ -45,8 +45,8 @@ go vet ./...
 
 1. Go 测试与 Web UI 构建并行执行，Web 产物只生成一次；
 2. 在原生 amd64 与 arm64 runner 上并行打包 Linux、macOS、Windows 二进制；
-3. 打包生产 Compose 示例并生成 `SHA256SUMS`；
-4. 发布源码仓库 Release，并同步到公开 `bytehop-dist` Release；
+3. 打包生产 Compose 示例与 `bytehop.skill`，并生成 `SHA256SUMS`；
+4. 发布二进制、部署包和 Skill 到源码仓库 Release，并同步到公开 `bytehop-dist` Release；
 5. 从已打包的 Linux 二进制组装多架构镜像，不在 Docker 内重复测试或编译；
 6. 生成 SBOM 和 provenance。
 
@@ -83,4 +83,4 @@ docker buildx imagetools inspect ghcr.io/rayui-lab/bytehop-dist:0.1.0
 
 发布版本通过 Go linker flags 写入二进制，因此 `bytehop version`、`/healthz` 和管理界面显示同一个版本。
 
-完成本地构建后，继续运行[本地验收环境](./local-stack)。
+完成本地构建后，继续运行[本地验收环境](/docs/development/local-stack)。

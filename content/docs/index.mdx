@@ -1,51 +1,59 @@
 ---
 title: 从这里开始
-description: ByteHop 是一个面向 AI Agent 的自托管临时访问网关。
+description: 先确认你要部署团队 Server，还是连接一个已经部署好的 ByteHop。
 ---
 
-ByteHop 解决一个具体问题：**Agent 需要查生产数据或调用内部 API，但真实密码不应该散落在每台电脑、配置文件和对话上下文里。**
-
-它把固定的最小权限凭证保留在服务端。用户登录后，只能为自己有权访问的资源申请短期 Lease；Agent 使用 Lease 访问资源，ByteHop 完成身份注入、转发和事件记录。
+ByteHop 由两部分组成：团队运行一个 **Server**，每位使用者按需安装 **Client**。Server 保存 Resource、账号、权限和上游凭证；Client 是 CLI 和可选 Skill，只负责以当前用户身份连接 Server。
 
 ```mermaid
 flowchart LR
-  A[人或 Agent] -->|登录、发现资源| B[ByteHop CLI]
-  B -->|申请短期 Lease| G[ByteHop]
-  G -->|注入固定只读身份| R[ClickHouse / ES / HTTP Bridge]
-  R -->|响应| G
-  G -->|结果 + Event| A
+  U[用户 / Agent] --> C[Client: CLI + 可选 Skill]
+  C -->|HTTPS + ByteHop 登录身份| S[ByteHop Server]
+  S -->|Resource 固定身份| R[数据库 / 内部 API]
+  S --> E[Web / Operation / Event]
 ```
 
-## 你可以先做什么
+## 先选择你的角色
 
 <Cards>
-  <Card title="第一次使用" href="/docs/quickstart" description="登录团队实例，发现 Resource，并完成第一次受控查询。" />
-  <Card title="了解 ByteHop" href="/docs/overview" description="理解 ByteHop 解决的问题、工作方式和核心设计。" />
-  <Card title="理解 Lease" href="/docs/concepts" description="弄清 Session、Lease、Resource 和 Event 的关系。" />
+  <Card title="我是使用者" href="/docs/quickstart" description="团队已经有 ByteHop 地址和账号；登录后查看 Resource，并由人或 Agent 调用。" />
+  <Card title="我是管理员" href="/docs/administration/installation" description="部署团队 Server，接入 Resource，创建用户并分配访问权限。" />
 </Cards>
 
-## 按你的角色开始
+### 使用者需要什么
 
-| 角色 | 第一页 | 你会完成什么 |
-| --- | --- | --- |
-| 团队成员 | [第一次使用](./quickstart) | 登录、发现授权 Resource、完成首次调用 |
-| Agent 使用者 | [给 Agent 使用](./using/agent-workflow) | 安装 Skill，建立稳定且不接触真实凭证的调用流程 |
-| 管理员 | [安装 ByteHop](./administration/installation) | 部署单实例、接入 Resource、配置成员与权限 |
-| 项目维护者 | [从源码构建](./development/source-build) | 构建、检查并运行真实 Compose 验收栈 |
+管理员应提供 Server 地址、独立用户名、初始密码和用途说明。只使用 Web 时无需安装 Client；需要终端、脚本或 AI Agent 调用时，再安装 CLI。Skill 是 Agent 的使用说明，不是 Server，也不会自动登录。
 
-## 当前覆盖范围
+[开始连接已有实例](/docs/quickstart)
 
-| 能力 | v0.1 状态 | 说明 |
-| --- | --- | --- |
-| ClickHouse HTTP | 可用 | 查询、SQL 历史、运行中查询与停止 |
-| Elasticsearch HTTP | 可用 | 通过 HTTP API 搜索，凭证留在服务端 |
-| 通用 HTTP API | 可用 | Basic、Bearer、API Key 和固定 Header 注入 |
-| MongoDB | 通过 Bridge | 把少量允许的操作包装成 HTTP，不下发原生连接串 |
-| Web 管理界面 | 可用 | 资源、Lease、Event、运行中操作和配置重载 |
-| CLI | 可用 | 适合人、Agent 和脚本，支持稳定 JSON 输出 |
+### 管理员需要做什么
 
-<Callout title="v0.1 的产品重点">
-  ByteHop 首版聚焦 HTTP 数据面、短期授权、凭证集中管理和可追踪的 Agent 调用。
+管理员先用 Docker 部署 Server，再创建 Resource、账号与 Access policy。完成后把地址和账号交给成员；成员不应该自己猜 Server 地址、Resource 名称或数据库凭证。
+
+[开始部署团队实例](/docs/administration/installation)
+
+## 谁负责什么
+
+| 部分 | 运行在哪里 | 负责什么 | 不负责什么 |
+| --- | --- | --- | --- |
+| ByteHop Server | 团队服务器 | 用户认证、Resource、Access policy、Lease、上游凭证注入、Event | 不安装到每个 Agent |
+| Web | 由 Server 提供 | 登录、查看 Resource、访问和 Event；管理员观察与重载 | 不执行数据库查询 |
+| CLI | 用户或 Agent 所在电脑 | 登录 Server、发现 Resource、执行 `request` / `connect` | 不保存上游凭证 |
+| Skill | Agent 的 Skill 目录 | 教 Agent 正确使用 CLI 和配置流程 | 不包含 CLI、账号或 Resource 权限 |
+
+## 常用入口
+
+| 要完成的事 | 文档 |
+| --- | --- |
+| 连接团队已有实例 | [第一次使用](/docs/quickstart) |
+| 安装 CLI 和 Skill | [安装客户端](/docs/using/client-installation) |
+| 部署 Server | [管理员安装](/docs/administration/installation) |
+| 用 Docker 启动 Server | [Docker 部署](/docs/administration/docker) |
+| 创建账号 | [用户管理](/docs/administration/member-lifecycle) |
+| 分配 Resource 权限 | [权限模型](/docs/administration/access-leases) |
+| 让 AI 使用 CLI | [ByteHop Skill](/docs/using/agent-workflow) |
+| 在飞书中使用 Hermes | [Hermes 与飞书](/docs/using/hermes) |
+
+<Callout title="建议从一个只读 Resource 开始">
+  先接入一项结果容易验证的只读能力，例如 ClickHouse 指标查询或订单查询 API。确认账号、权限、Event 和停止长查询都符合预期后，再增加其他 Resource。
 </Callout>
-
-下一步直接进入[第一次使用](./quickstart)，或者先阅读[产品介绍](./overview)。

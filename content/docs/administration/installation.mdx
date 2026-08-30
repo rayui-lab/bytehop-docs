@@ -1,80 +1,71 @@
 ---
-title: 安装 ByteHop
-description: 使用官方二进制或容器镜像安装同一版本的服务端与 CLI。
+title: 管理员安装
+description: 部署团队共用的 ByteHop Server，创建 Resource、用户和 Access policy，再交给成员使用。
 ---
 
-ByteHop 的服务端和 CLI 是同一个二进制文件。团队管理员通常用容器运行服务端，成员从公开的 [bytehop-dist](https://github.com/rayui-lab/bytehop-dist) 下载本机 CLI；两者固定为相同版本。
+这页面向负责部署 ByteHop 的管理员。普通使用者不需要执行这里的命令；已有 Server 地址和账号时，应从[第一次使用](/docs/quickstart)开始。
 
-## 选择安装方式
+## 你要部署的是 Server
 
-| 使用场景 | 推荐方式 |
-| --- | --- |
-| 在 Linux 主机部署团队实例 | [Docker Compose](./docker) |
-| 在 macOS、Linux 或 Windows 安装 CLI | bytehop-dist Release 二进制 |
-| 修改 ByteHop 本身 | [从源码构建](../development/source-build) |
+团队只需要运行一个 ByteHop Server。它提供 Web、控制 API 和 HTTP 数据面，并保存用户、Resource、Lease 与 Event。每位成员的 CLI 和 Skill 都连接这个 Server。
 
-## 快速安装 CLI
-
-macOS 或 Linux：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | sh
+```text
+成员电脑                                      团队服务器
+Web / CLI / Agent + Skill  ── HTTPS ──>  ByteHop Server  ──>  数据库 / API
 ```
 
-脚本只做四件事：识别系统与架构、下载 Release、验证 SHA-256、安装 `bytehop`。默认安装最新稳定版到 `/usr/local/bin`。
+CLI 与 Server 来自同一个 `bytehop` 二进制，但职责不同：服务器运行 `bytehop serve`；成员电脑运行 `login`、`resources`、`request` 和 `connect`。生产环境推荐用 Docker Compose 运行 Server。
 
-固定版本或自定义目录：
+## 管理员完成五件事
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | \
-  sh -s -- --version 0.1.0 --install-dir "$HOME/.local/bin"
-```
-
-安装后确认：
-
-```bash
-bytehop version
-```
-
-## 手动安装预编译二进制
-
-每个 Release 提供以下平台：
-
-| 操作系统 | 架构 | 文件 |
+| 步骤 | 管理员输入 | 完成结果 |
 | --- | --- | --- |
-| Linux | amd64、arm64 | `.tar.gz` |
-| macOS | amd64、arm64 | `.tar.gz` |
-| Windows | amd64、arm64 | `.zip` |
+| 1. 部署 Server | Linux 主机、域名、Docker | 团队可访问的 HTTPS 地址 |
+| 2. 接入 Resource | 上游地址和固定最小权限身份 | `analytics` 等 Resource |
+| 3. 创建用户 | 独立用户名、初始密码、用户组 | 成员可以登录 ByteHop |
+| 4. 分配权限 | user / group 到 Resource 的 Access policy | 成员只看到获准 Resource |
+| 5. 交付给成员 | Server 地址、账号、用途说明 | 成员按第一次使用完成验证 |
 
-以 Linux amd64 和 `v0.1.0` 为例：
+ByteHop v0.1 没有公开注册。账号由管理员写入 `bytehop.yaml`，密码通过环境变量注入。成员拿到的是 ByteHop 账号，不是数据库账号。
 
-```bash
-VERSION=0.1.0
-curl -fLO "https://github.com/rayui-lab/bytehop-dist/releases/download/v${VERSION}/bytehop_${VERSION}_linux_amd64.tar.gz"
-curl -fLO "https://github.com/rayui-lab/bytehop-dist/releases/download/v${VERSION}/SHA256SUMS"
-grep "bytehop_${VERSION}_linux_amd64.tar.gz" SHA256SUMS | sha256sum -c -
-tar -xzf "bytehop_${VERSION}_linux_amd64.tar.gz"
-sudo install -m 0755 "bytehop_${VERSION}_linux_amd64/bytehop" /usr/local/bin/bytehop
-bytehop version
-```
-
-macOS 使用对应的 `darwin_amd64` 或 `darwin_arm64` 包，并把校验命令换成 `shasum -a 256 -c`。Windows 从 [bytehop-dist Releases](https://github.com/rayui-lab/bytehop-dist/releases/latest) 下载 `.zip`，解压后将 `bytehop.exe` 放进受控的软件目录并加入 `PATH`。
-
-<Callout title="先核对再安装">
-  校验和文件与二进制必须来自同一个 Release。不要从聊天附件、临时网盘或不明镜像分发 ByteHop。
-</Callout>
-
-## 服务端需要准备什么
+## 部署前准备
 
 - 一台能访问上游数据库或 API 的 Linux 主机；
-- HTTPS 域名，或团队已有的可信入口网关；
-- ByteHop YAML、通过环境变量注入的 Secret 和持久数据目录；
-- 数据库或 API 管理员预先创建的固定最小权限身份。
+- 指向该主机的 HTTPS 域名；
+- Docker Engine 与 Docker Compose；
+- 至少一个上游固定最小权限身份；
+- 用于首个 ByteHop 管理员账号的随机密码。
 
-服务端启动后，按以下顺序完成接入：
+## 推荐部署方式
 
-1. [使用 Docker 部署](./docker)；
-2. [接入 Resource](./resource-onboarding)；
-3. [配置权限](./access-leases)；
-4. [管理成员](./member-lifecycle)；
-5. 让成员按[第一次使用](../quickstart)完成登录与查询。
+使用 Release 中的生产 Compose 示例，它只长期运行 ByteHop 与 Caddy：
+
+[使用 Docker 部署](/docs/administration/docker)
+
+需要自定义进程管理或构建 ByteHop 本身时，再使用[从源码构建](/docs/development/source-build)。普通成员安装 CLI 和 Skill 的方法在[安装客户端](/docs/using/client-installation)。
+
+## Server 启动后
+
+1. 使用 `.env` 中的 `BYTEHOP_ADMIN_PASSWORD` 和 `admin@example.com` 登录 Web；
+2. 确认 **Resources** 中的首个 Resource 可以发现；
+3. 在 `config/bytehop.yaml` 中为每位成员增加独立用户和最小用户组；
+4. 配置 Access policy 后校验并应用；
+5. 用一个普通成员账号登录，验证应显示和不应显示的 Resource；
+6. 通过安全渠道交付 Server 地址、用户名和初始密码。
+
+账号写法见[用户管理](/docs/administration/member-lifecycle)，Resource 授权规则见[权限模型](/docs/administration/access-leases)，数据库和 API 接入见[接入 Resource](/docs/administration/resource-onboarding)。
+
+## 交给成员的信息
+
+不要只发一句“ByteHop 已经好了”。至少提供：
+
+```text
+ByteHop 地址：https://bytehop.example.com
+用户名：alice@example.com
+初始密码：通过团队 Secret 渠道发送
+已授权 Resource：analytics
+用途：只读查询生产指标
+开始文档：https://rayui-lab.github.io/bytehop-docs/docs/quickstart/
+```
+
+不要发送 ClickHouse 密码、MongoDB URI、API Key 或 ByteHop Server 的 `.env`。成员只需要 ByteHop 地址和自己的 ByteHop 账号。

@@ -1,0 +1,76 @@
+---
+title: 安装客户端
+description: 在使用者或 Agent 所在的电脑安装 ByteHop CLI，并按需安装 ByteHop Skill。
+---
+
+ByteHop Client 指运行在用户电脑或 Agent 工具环境中的 `bytehop` CLI。它连接团队已经部署好的 ByteHop Server，不会在本机启动网关，也不保存数据库或内部 API 的上游凭证。
+
+```text
+用户或 Agent 所在电脑                     团队服务器
+CLI + 可选 Skill  ── HTTPS ──>  ByteHop Server  ──>  数据库 / API
+```
+
+## 安装前先拿到什么
+
+向 ByteHop 管理员获取：
+
+- Server 地址，例如 `https://bytehop.example.com`；
+- 你的独立用户名；
+- 初始密码，使用团队已有的密码或 Secret 渠道接收。
+
+v0.1 没有公开注册。账号由管理员在 Server 配置中创建；CLI 和 Skill 都不会替你创建账号或授予 Resource。
+
+## 安装 CLI
+
+macOS 或 Linux：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | sh
+bytehop version
+```
+
+脚本识别操作系统与 CPU 架构，从 [bytehop-dist](https://github.com/rayui-lab/bytehop-dist/releases/latest) 下载 Release、核对 SHA-256，再安装 `bytehop`。Windows 从同一 Release 页面下载对应 `.zip`，解压后把 `bytehop.exe` 加入 `PATH`。
+
+需要固定版本或自定义安装目录时：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | \
+  sh -s -- --version 0.1.0 --install-dir "$HOME/.local/bin"
+```
+
+## 什么时候还要安装 Skill
+
+| 用法 | CLI | Skill |
+| --- | --- | --- |
+| 只在 Web 查看 Resource 和 Event | 不需要 | 不需要 |
+| 人在终端运行 `resources`、`request` | 需要 | 不需要 |
+| Codex、Claude、Hermes 等 Agent 调用 ByteHop | 需要 | 推荐安装 |
+| Agent 协助管理员修改 `bytehop.yaml` | 需要 | 需要 |
+
+CLI 执行登录、发现和请求；Skill 只告诉 Agent 应按什么顺序调用 CLI、怎样处理错误和哪些信息不能读取。安装 Skill 不等于已经登录，也不会增加当前账号的权限。
+
+Codex：
+
+```bash
+curl -fsSL https://github.com/rayui-lab/bytehop-dist/releases/latest/download/install-skill.sh | \
+  sh -s -- --agent codex
+```
+
+Claude Code：
+
+```bash
+curl -fsSL https://github.com/rayui-lab/bytehop-dist/releases/latest/download/install-skill.sh | \
+  sh -s -- --agent claude
+```
+
+Hermes 使用自己的 Skill 管理器：
+
+```bash
+hermes skills install rayui-lab/bytehop/skills/bytehop
+```
+
+安装 Skill 后重新开始 Agent 会话。完整行为见 [ByteHop Skill](/docs/using/agent-workflow)，Hermes 与飞书流程见[在 Hermes 与飞书中使用](/docs/using/hermes)。
+
+## 下一步
+
+客户端准备好后，按[第一次使用](/docs/quickstart)完成登录、查看获准 Resource，并选择由人或 Agent 发起第一次请求。

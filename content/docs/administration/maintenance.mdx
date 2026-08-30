@@ -17,7 +17,7 @@ ByteHop v0.1 采用小团队单实例部署。日常运维重点是保持授权�
 
 ## 停止卡住的请求
 
-普通成员可以停止自己的 Operation，管理员可以停止任意 Operation。优先停止单个请求，不要为了一个卡住的 SQL 撤销整个成员的全部访问。
+普通用户可以停止自己的 Operation，管理员可以停止任意 Operation。优先停止单个请求，不要为了一个卡住的 SQL 让该用户的整个 Lease 失效。
 
 ClickHouse 会先取消本地连接，再尝试按 `query_id` 结束远端查询。检查返回的 `local_cancelled`、`upstream_cancel_tried` 与 `upstream_cancelled`；“本地已取消”不等于上游一定终止。
 
@@ -27,7 +27,7 @@ ClickHouse 会先取消本地连接，再尝试按 `query_id` 结束远端查询
 | --- | --- |
 | 单个请求卡住 | Stop Operation |
 | 某次任务不应继续 | revoke 对应 Lease |
-| 成员设备丢失 / Session 泄露 | 删除或改密该用户并 reload |
+| 用户设备丢失 / Session 泄露 | 删除或改密该用户并 reload |
 | Resource credential 泄露 | 先在上游轮换，再更新 Secret / Resource 并 reload |
 | 权限配置错误 | 收紧 Access，diff 后 reload，确认受影响 Lease 已撤销 |
 
@@ -43,7 +43,7 @@ bytehop config diff
 bytehop config reload
 ```
 
-静态字段变化返回 `restart_required`，整份配置不会被部分应用。详细行为见[安全热重载](./reload)。
+静态字段变化返回 `restart_required`，整份配置不会被部分应用。详细行为见[安全热重载](/docs/administration/reload)。
 
 ## 备份与恢复
 
@@ -58,7 +58,7 @@ bytehop config reload
 恢复时在隔离主机验证配置与文件权限，再切换入口。进程启动会撤销上一进程遗留的 active Session 与 Lease，因此客户端重新登录是预期行为。
 
 <Callout title="安排维护窗口">
-  服务升级按单实例维护流程执行。提前保存回滚版本和状态备份，并通知成员在服务恢复后重新登录。
+  服务升级按单实例维护流程执行。提前保存回滚版本和状态备份，并通知使用者在服务恢复后重新登录。
 </Callout>
 
 ## 升级
@@ -69,4 +69,4 @@ bytehop config reload
 4. 备份二进制、配置和 SQLite；
 5. 安排短维护窗口并记录回滚版本；
 6. 升级后验证登录、Resource 发现、一次允许请求、一次拒绝请求、Event 与 Stop；
-7. 向成员分发匹配版本 CLI。
+7. 向使用者分发匹配版本 CLI。

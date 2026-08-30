@@ -3,7 +3,7 @@ title: 安全模型
 description: ByteHop 如何保护凭证、Session、Lease 与上游访问。
 ---
 
-ByteHop 减少长期上游 credential 的暴露面，并让 Agent 访问可归属、可到期、可撤销。整体安全性由 ByteHop、部署环境和上游最小权限共同完成。
+ByteHop 减少长期上游 credential 的暴露面，并让 Agent 访问可以关联到登录用户、绑定单个 Resource 并自动到期。整体安全性由 ByteHop、部署环境和上游最小权限共同完成。
 
 ## 信任关系
 
@@ -45,15 +45,17 @@ ByteHop 主机、配置注入渠道、SQLite、TLS 私钥与上游固定 credent
 - 配置热重载是全量校验后的原子切换，不部分应用失败配置；
 - 进程重启会撤销上一进程遗留的 active Session 与 Lease。
 
-## 部署侧职责
+## 仍需由部署者控制的风险
 
-- 固定上游账号本身权限过大；
-- Agent 发出权限范围内但昂贵、错误或有隐私影响的查询；
-- 上游返回内容中的 prompt injection；
-- ByteHop 主机被攻破或环境变量被读取；
-- ByteHop 主机、SQLite 和配置的备份恢复；
-- 本地用户口令的创建、轮换和回收；
-- 通用 HTTP / Elasticsearch 的 OpenAPI 契约被误认为运行时 allowlist。
+ByteHop 不替代数据库、API、主机和 Agent 自身的安全控制。部署时仍需处理：
+
+- 固定上游账号权限过大：在数据库或 API 侧缩小权限，不把管理员账号配置给 Resource；
+- Agent 发出权限范围内但昂贵、错误或涉及敏感数据的查询：使用上游配额、超时、结果限制和受限 Bridge；
+- 上游返回内容中的 prompt injection：Agent 必须把结果视为数据，不能据此扩大权限或调用其他资源；
+- ByteHop 主机或环境变量被读取：限制主机访问，使用 HTTPS 和现有 Secret 管理系统；
+- SQLite、配置与 TLS 文件丢失：纳入备份、恢复验证和磁盘容量监控；
+- 本地用户口令变化：使用独立账号，修改后热更新并验证旧 Session 已失效；
+- 把 OpenAPI 当成权限规则：OpenAPI 只帮助 Agent 发现操作，最终权限仍由 Resource policy、上游身份和 Bridge 决定。
 
 ## 数据最小化
 
