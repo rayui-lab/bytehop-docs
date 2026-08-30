@@ -5,6 +5,27 @@ description: 用一份 YAML 定义服务、身份、资源与访问策略。
 
 YAML 是 ByteHop 的唯一配置事实源。Web 不维护第二份 Resource 表单数据，SQLite 只保存运行状态与 Event。
 
+一份配置主要回答四个问题：
+
+| 顶层字段 | 回答的问题 |
+| --- | --- |
+| `server` | 网关监听在哪里，Session 与默认 Lease 多久失效，状态保存在哪里 |
+| `auth` | 哪些用户可以登录，属于哪些用户组，谁拥有管理能力 |
+| `resources` | 网关连接哪些数据库或 API，使用哪套固定上游身份 |
+| `access` | 哪个用户或用户组可以发现和调用哪些 Resource |
+
+配置不会把数据库权限复制到 ByteHop。ByteHop 只判断用户能否使用某个 Resource；表、索引、集合、租户和读写权限仍由该 Resource 绑定的上游身份落实。
+
+## 让 Agent 维护配置
+
+安装 [ByteHop Skill](/docs/using/agent-workflow#配置模式) 后，可以直接描述 Resource、Secret 环境变量名和 Access 范围。Skill 会让 Agent 保留现有配置、生成最小改动并运行 `config check`；只有管理员明确要求时才继续 `diff` 或 `reload`。
+
+```text
+请使用 ByteHop Skill 检查当前 bytehop.yaml。
+新增一个只允许 data 组使用的 ClickHouse Resource，密码引用环境变量。
+先展示缺少的信息，不要猜配置，也不要直接 reload。
+```
+
 ## 最小配置
 
 ```yaml
@@ -22,10 +43,12 @@ auth:
   provider: local
   local:
     users:
+      "admin@example.com":
+        password: "${BYTEHOP_ADMIN_PASSWORD}"
+        admin: true
       "alice@example.com":
         password: "${BYTEHOP_ALICE_PASSWORD}"
         groups: [data]
-        admin: true
 
 resources:
   analytics:
@@ -43,12 +66,40 @@ access:
     max_ttl: 30m
 ```
 
+这个例子刻意把管理能力和数据访问分开：`admin@example.com` 可以查看系统并热更新配置，但没有匹配任何 Access policy，因此不能调用 `analytics`；`alice@example.com` 属于 `data` 组，可以使用 `analytics`，却没有管理能力。
+
+## Resource 与上游权限
+
+一个 Resource 绑定一个上游入口和一套固定凭证。如果同一个数据库需要提供不同数据范围，应先在上游创建不同的最小权限身份，再配置成不同 Resource：
+
+```yaml
+resources:
+  analytics-full:
+    kind: clickhouse
+    upstream: "https://clickhouse.internal:8443"
+    credential:
+      basic:
+        username: bytehop_data_ro
+        password: "${CLICKHOUSE_DATA_PASSWORD}"
+
+  analytics-summary:
+    kind: clickhouse
+    upstream: "https://clickhouse.internal:8443"
+    credential:
+      basic:
+        username: bytehop_support_ro
+        password: "${CLICKHOUSE_SUPPORT_PASSWORD}"
+```
+
+不要给 ByteHop 一个数据库管理员账号，再期待网关通过提示词或 SQL 解析区分权限。完整模型见[权限模型](/docs/administration/access-leases)和 [Resource 模型](/docs/resources)。
+
 ## Secret 与环境变量
 
 配置支持 `${ENV_NAME}`。推荐把密码通过容器 Secret、systemd EnvironmentFile 或 Secret Manager 注入，不要把真实值提交到仓库。
 
 ```bash
 export BYTEHOP_ALICE_PASSWORD='replace-me'
+export BYTEHOP_ADMIN_PASSWORD='replace-me'
 export CLICKHOUSE_READONLY_PASSWORD='replace-me'
 bytehop config check --config ./bytehop.yaml
 bytehop serve --config ./bytehop.yaml
@@ -66,4 +117,4 @@ ByteHop 从部署环境读取 secret。轮换与版本继续交给现有 Secret 
 bytehop config check --config ./bytehop.yaml
 ```
 
-完整字段见 [配置参考](../reference/config)。
+完整字段见 [配置参考](/docs/reference/config)。

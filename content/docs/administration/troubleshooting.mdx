@@ -55,6 +55,12 @@ Lease 只绑定一个 Resource。不要复用另一个资源的 endpoint/token�
 - 若刚轮换 secret，执行 `config diff` / `reload`；
 - 查看 Event 的 status 与 error code，不要打印原始 credential。
 
+## Hermes Event 缺少会话或飞书来源
+
+先确认 Hermes 已安装 ByteHop Skill，并在安装后开始了新会话。Event 已产生但 Agent 或 Task ID 为空时，通常是 `bytehop` 没有由当前 Hermes 工具子进程直接执行，或者工具环境没有提供 `HERMES_SESSION_ID`。
+
+不要把 Session ID 手工复制进命令，也不要沿用另一条会话的来源。只检查变量是否存在，不记录其值。Actor 不正确时，应修正运行 Hermes 机器上的 ByteHop 登录；Hermes 和飞书字段不会替代登录身份。完整验证步骤见[在 Hermes 与飞书中使用](/docs/using/hermes)。
+
 ## 下一步仍无法定位
 
 收集 ByteHop 版本、实例 environment、时间范围、Resource 名、`request_id`、`query_id`、错误 JSON 和经过脱敏的配置结构。不要收集密码、token、Cookie、Mongo URI 或完整业务响应。

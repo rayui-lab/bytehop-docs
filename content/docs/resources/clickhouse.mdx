@@ -5,6 +5,14 @@ description: 通过 ClickHouse HTTP 接口查询、观察 SQL，并停止卡住�
 
 ByteHop 使用 ClickHouse HTTP 接口。客户端持有短期 Lease，ClickHouse 只看到管理员预先创建的固定用户。
 
+安装 ByteHop Skill 后，可以把接入任务直接交给 Agent：
+
+```text
+请使用 ByteHop Skill 接入生产 ClickHouse。
+先向我确认上游地址、只读用户名、密码环境变量名、允许的组和 Lease 上限；
+不要猜值。修改 bytehop.yaml 后运行 config check，只展示 diff，不要直接 reload。
+```
+
 ## 配置
 
 ```yaml
@@ -38,6 +46,8 @@ ByteHop 不需要管理员账号，也不会把 SQL allowlist 当作数据库权
 
 ## 发起查询
 
+用户安装 Skill 后只需描述查询目标；下面的 CLI 是 Skill 最终会使用的执行入口，也可用于人工排障。
+
 ```bash
 printf '%s' \
   'SELECT service, count() AS events FROM bytehop_demo.events GROUP BY service FORMAT JSON' | \
@@ -50,7 +60,7 @@ ByteHop 为请求生成不可由客户端覆盖的 `query_id`。JSON envelope �
 
 ## 看见并停止长查询
 
-正在运行的 ByteHop 请求会显示在 Web 的 **Sessions** 或 **My access**。管理员能看到所有请求，成员只能看到自己的请求。停止一个 Operation 会：
+正在运行的 ByteHop 请求会显示在 Web 的 **Sessions** 或 **My access**。管理员能看到所有请求，普通用户只能看到自己的请求。停止一个 Operation 会：
 
 1. 取消 ByteHop 到上游的当前连接；
 2. 在支持时尝试按 `query_id` 执行远端 `KILL QUERY`；

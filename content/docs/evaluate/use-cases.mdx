@@ -3,25 +3,37 @@ title: 适用场景
 description: 用具体案例理解 ByteHop 如何接入数据库、内部 API 和 Agent 工作流。
 ---
 
-ByteHop 的价值不在“能代理 HTTP”，而在把原本散落的长期凭证替换成可归属、短期、资源绑定的访问。
+当数据库或内部 API 已经可以通过 HTTP 使用，但账号、权限和 Agent 调用分散在不同机器时，ByteHop 才开始产生价值。它把请求集中经过一个网关，同时保留不同用户、用户组和上游身份原本应该有的差异。
 
 ## 场景一：Agent 排查 ClickHouse 指标
 
-**原来的做法**：把生产只读账号写入每位工程师的 Codex / Claude 配置。密码轮换需要逐台更新；长查询卡住时不知道是谁发起的。
+**原来的做法**：把生产只读账号写入多个 Codex / Claude 配置。密码轮换需要逐台更新；长查询卡住时不知道是哪次 Agent 调用发起的。
 
-**使用 ByteHop**：数据库管理员创建 `analytics_ro`，在 ClickHouse 侧限制库表、只读、执行时间和内存。工程师登录 ByteHop 后让 Agent 发现 `analytics`，每次查询自动领取短期 Lease。管理员可用 request/query ID 找到运行中的 SQL并停止单次请求。
+**使用 ByteHop**：数据库管理员创建 `analytics_ro`，在 ClickHouse 侧限制库表、只读、执行时间和内存。用户登录 ByteHop 后让 Agent 发现 `analytics`，每次查询自动领取短期 Lease。管理员可用 request/query ID 找到运行中的 SQL，并停止单次请求。
 
-**权限方式**：ClickHouse 继续负责表、只读、执行时间和内存配额，ByteHop 负责成员、Lease 和调用记录。
+**权限方式**：ClickHouse 继续负责表、只读、执行时间和内存配额，ByteHop 负责用户、Resource、Lease 和调用记录。
 
-## 场景二：运营 Agent 查询 MongoDB 用户资料
+## 场景二：不同用户组访问同一数据源的不同范围
 
-**原来的做法**：把 `mongodb://ops:...` 连接串发给同事，Agent 获得了数据库、账号与网络位置，并可能执行超出实际任务的查询。
+同一个 ClickHouse 中，`data` 组可以读取分析明细，`support` 组只能读取订单汇总。部署者在 ClickHouse 创建 `data_ro` 与 `support_ro` 两个固定身份，并在 ByteHop 中配置成两个 Resource：
+
+```text
+group:data     → analytics-full    → ClickHouse user: data_ro
+group:support  → analytics-summary → ClickHouse user: support_ro
+admin          → 管理 ByteHop，不自动获得上述 Resource
+```
+
+用户登录后只会发现 Access policy 允许的 Resource。修改用户组或 policy 并热更新后，新的资源列表和后续 Lease 立即按新配置计算，不需要修改各台客户端。
+
+## 场景三：Agent 查询 MongoDB 用户资料
+
+**原来的做法**：把 `mongodb://ops:...` 连接串复制到客户端，Agent 获得了数据库、账号与网络位置，并可能执行超出实际任务的查询。
 
 **使用 ByteHop**：在 MongoDB 附近部署一个 Bridge，只开放 `POST /v1/find`，限制 `users` collection、projection、limit 和 timeout。ByteHop 再为 Bridge 提供临时资源授权。Agent 不接触 Mongo URI，也不能调用 Bridge 未提供的操作。
 
 **接入方式**：Bridge 维护少量明确的领域接口，使 Agent 只接触完成任务所需的操作。
 
-## 场景三：替代分散的内部 HTTP CLI 凭证
+## 场景四：替代分散的内部 HTTP CLI 凭证
 
 团队已有一个脚本调用内部 API，但每台电脑都保存 Basic password 和 `tide_sid` Cookie。将该 HTTP client 定义成 `kind: http` Resource 后，凭证只在 ByteHop 服务端配置，Agent 用 `connect` 临时运行原脚本：
 
@@ -30,17 +42,23 @@ bytehop connect davinci-stage --ttl 5m -- \
   ./existing-client --base-url "$BYTEHOP_ENDPOINT"
 ```
 
-这样不必立即重写现有 client，也能统一身份和 Event。若脚本能读取环境变量即可接入。
+这样不必立即重写现有 client，也能统一身份和 Event。脚本只要能接收临时 Base URL 即可接入。
 
-## 场景四：小团队统一 AI 的生产访问
+## 场景五：Elasticsearch 按索引范围提供搜索
 
-团队需要覆盖两个数据库 HTTP API 与三条内部只读 API。ByteHop 用单二进制、YAML 和 SQLite 统一 Resource、成员权限、Lease 与 Event，适合从一个高频只读场景开始逐步接入。
+订单 Agent 只需要搜索 `orders-*`，而排障 Agent 还要读取 `service-logs-*`。先在 Elasticsearch 创建两个最小权限 role 或 API Key，再映射成两个 Resource。Agent 不需要保存 Elasticsearch token，也不能通过请求头切换为更高权限身份。
+
+## 场景六：逐步统一多个 Agent 的 HTTP 访问
+
+一个实例需要覆盖 ClickHouse、Elasticsearch 与若干内部只读 API。ByteHop 用单二进制、YAML 和 SQLite 统一 Resource、用户权限、Lease 与 Event；Codex、Claude、Hermes 和脚本继续使用各自的交互方式，只通过 CLI 或 HTTP 共享同一个网关。
 
 ## 可组合的系统
 
 - 原生 PostgreSQL / MySQL / MongoDB 客户端可以继续使用现有数据库访问方案；
 - SSH、RDP、Kubernetes 与桌面客户端可由现有堡垒机或访问平台管理；
 - ByteHop 聚焦 Agent 使用的 HTTP Resource，并可与上述系统同时部署。
+
+如果主要需求是原生数据库客户端、SSH、Kubernetes、审批或完整会话录制，应先评估成熟访问平台；如果只需要为模型定义一组 MCP 数据库工具，应先评估 MCP Toolbox。具体区别见[与其他方案比较](/docs/evaluate/comparison)。
 
 <Callout title="可复现的案例">
   ClickHouse、Elasticsearch、MongoDB Bridge 和 Davinci 风格 API 都在仓库 Compose 中配有确定性数据与 smoke test，可用于本地验收完整链路。

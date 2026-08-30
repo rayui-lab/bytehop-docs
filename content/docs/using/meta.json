@@ -1,4 +1,10 @@
 {
   "title": "使用 ByteHop",
-  "pages": ["agent-workflow", "cli", "web-console"]
+  "pages": [
+    "client-installation",
+    "agent-workflow",
+    "hermes",
+    "cli",
+    "web-console"
+  ]
 }

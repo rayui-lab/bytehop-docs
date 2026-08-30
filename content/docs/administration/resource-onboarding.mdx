@@ -3,7 +3,17 @@ title: 接入 Resource
 description: 从最小权限上游身份开始，把一个数据库或内部 API 安全接入 ByteHop。
 ---
 
-接入 Resource 的顺序应是“先定义数据范围，再配置网关”，不要先把管理员凭证填进 YAML。
+接入 Resource 的顺序应是“先定义用途和数据范围，再配置网关”，不要先把管理员凭证填进 YAML。完成后，获准用户只需要 Resource 名称即可通过 ByteHop 调用；上游地址和固定凭证不会进入客户端配置。
+
+## 可以交给 ByteHop Skill
+
+安装 [ByteHop Skill](/docs/using/agent-workflow#配置模式) 后，把下面的信息交给 Agent：Resource 用途、真实上游、固定最小权限身份、Secret 环境变量名、允许的用户或组，以及 Lease 上限。Agent 会生成最小 YAML 并调用 CLI 校验，但不会替你决定上游应授予哪些权限。
+
+```text
+请使用 ByteHop Skill 接入这个 Resource。先检查现有 bytehop.yaml，
+列出仍缺少的上游、凭证引用和 Access 信息；信息齐全后再修改。
+运行 config check 并展示 diff，不要直接应用。
+```
 
 ## 1. 定义最小能力
 
@@ -13,7 +23,7 @@ description: 从最小权限上游身份开始，把一个数据库或内部 API
 - 允许读哪些数据库、表、索引、集合或业务对象；
 - 是否真的需要写操作；
 - 预期最长查询时间、结果规模和并发；
-- 需要哪些人或组；
+- 允许哪些用户或用户组；
 - 哪个系统负责最终授权。
 
 如果一段描述里出现两种明显不同的数据范围，拆成两个 Resource。
@@ -29,7 +39,7 @@ description: 从最小权限上游身份开始，把一个数据库或内部 API
 | MongoDB Bridge | Bridge 专用 token；Mongo 用户固定 database / collection 与只读角色 |
 | HTTP API | 专用 service account / token，只允许目标租户和业务动作 |
 
-针对每种协议的配置示例见 [ClickHouse](../resources/clickhouse)、[Elasticsearch](../resources/elasticsearch)和[HTTP API 与 Bridge](../resources/http-bridge)。
+针对每种协议的配置示例见 [ClickHouse](/docs/resources/clickhouse)、[Elasticsearch](/docs/resources/elasticsearch)和[HTTP API 与 Bridge](/docs/resources/http-bridge)。
 
 ## 3. 添加 Resource
 
@@ -69,12 +79,14 @@ bytehop config diff
 bytehop config reload
 ```
 
-如果 diff 显示 `restart_required`，不要尝试部分应用。按[安全热重载](./reload)处理。
+如果 diff 显示 `restart_required`，不要尝试部分应用。按[安全热重载](/docs/administration/reload)处理。
+
+如果由 Agent 操作，先让它解释 diff 对 Session、Lease 和重启的影响；只有你明确要求应用时才执行 `config reload`。
 
 ## 6. 验收正反两条路径
 
-- 目标成员能在 `bytehop resources` 中发现 Resource；
-- 未授权成员不能发现它，也不能创建 Lease；
+- 目标用户能在 `bytehop resources` 中发现 Resource；
+- 未授权用户不能发现它，也不能创建 Lease；
 - 一个其他 Resource 的 Lease 不能调用它；
 - 固定身份在上游确实无法越界读写；
 - CLI / Web / Event 中不出现上游 credential；

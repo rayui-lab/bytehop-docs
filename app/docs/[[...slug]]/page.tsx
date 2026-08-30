@@ -6,9 +6,11 @@ import {
   MarkdownCopyButton,
 } from "fumadocs-ui/layouts/docs/page";
 import { createRelativeLink } from "fumadocs-ui/mdx";
+import { Bot, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getMDXComponents } from "@/components/mdx";
+import { withBasePath } from "@/lib/shared";
 import { getPageImageUrl, getPageMarkdownUrl, source } from "@/lib/source";
 
 export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
@@ -25,8 +27,24 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
       <DocsDescription className="mb-0">
         {page.data.description}
       </DocsDescription>
-      <div className="flex flex-row gap-2 items-center border-b pb-6">
+      <div className="docs-actions">
         <MarkdownCopyButton markdownUrl={markdownUrl} />
+        <a
+          className="docs-action-link"
+          href={markdownUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <ExternalLink className="size-3.5" />
+          查看 Markdown
+        </a>
+        <a
+          className="docs-action-link"
+          href={withBasePath("/docs/using/agent-workflow")}
+        >
+          <Bot className="size-3.5" />
+          Agent 使用
+        </a>
       </div>
       <DocsBody>
         <MDX

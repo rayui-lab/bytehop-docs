@@ -5,6 +5,14 @@ description: 接入内部 API，或把 MongoDB、脚本等非 HTTP 能力包装�
 
 `kind: http` 是最通用的 Resource。它既能代理现有内部 API，也能把数据库、CLI 或脚本包装成少量明确的 HTTP 操作。
 
+安装 ByteHop Skill 后，可以让 Agent 根据现有 OpenAPI 和凭证引用生成配置：
+
+```text
+请使用 ByteHop Skill 接入这个内部 HTTP API。
+先读取 OpenAPI，向我确认 upstream、credential 的环境变量名、允许的组和 Lease 上限。
+不要把 Cookie、Token 或 MongoDB URI 写进对话或 YAML；检查配置后只展示 diff。
+```
+
 ## 接入已有内部 API
 
 ```yaml
@@ -39,6 +47,8 @@ flowchart LR
 Bridge 应固定或严格校验：database、collection、允许的操作、projection、limit、timeout 和响应大小。它持有 MongoDB URI，ByteHop 持有 Bridge credential，Agent 两者都看不到。
 
 示例请求：
+
+用户只需向安装了 Skill 的 Agent 描述“查哪个用户、返回哪些字段、最多多少条”。Skill 会先读取 Resource 的调用说明，再生成受约束请求。
 
 ```bash
 printf '%s' '{

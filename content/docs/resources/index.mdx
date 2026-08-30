@@ -3,7 +3,7 @@ title: Resource 模型
 description: 一个 Resource 如何定义上游、固定身份、协议语义和 Agent 可读契约。
 ---
 
-一个 Resource 是 ByteHop 对外暴露的最小能力单元：**一个 HTTP(S) upstream、一种资源类型、一组固定最小权限 credential，以及可选的 OpenAPI 契约。**
+一个 Resource 是 ByteHop 网关对外提供的最小能力单元：**一个 HTTP(S) upstream、一种资源类型、一组固定最小权限 credential，以及可选的 OpenAPI 契约。** 用户和 Agent 只看到 Resource 名称、用途与调用说明，不会收到上游地址或 credential。
 
 ```yaml
 resources:
@@ -16,6 +16,15 @@ resources:
         username: bytehop_analytics_ro
         password: "${CLICKHOUSE_ANALYTICS_PASSWORD}"
 ```
+
+一次调用中，各组件负责的事情不同：
+
+| 组件 | 负责什么 |
+| --- | --- |
+| ByteHop 登录与 Access policy | 当前用户能否发现和调用这个 Resource |
+| Lease | 这次访问绑定哪个用户、Resource，以及何时失效 |
+| Resource credential | 网关以哪个固定身份连接上游 |
+| 数据库、API 或 Bridge | 最终允许哪些表、索引、集合、租户和读写动作 |
 
 ## 不要用一个高权限账号覆盖所有范围
 

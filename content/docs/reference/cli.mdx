@@ -13,7 +13,7 @@ bytehop <command> [options]
 | --- | --- | --- |
 | `login` | `bytehop login <url> --user <name> --password-stdin [--json]` | 建立本地控制面 Session |
 | `logout` | `bytehop logout [--json]` | 服务端撤销 Session 后删除本地凭证 |
-| `resources` | `bytehop resources [name] [--json]` | 列出资源或查看单个 contract |
+| `resources` | `bytehop resources [name] [--json]` | 列出资源或查看单个 Resource 调用说明 |
 | `request` | `bytehop request <resource> <method> <path> [options]` | 创建短 Lease，发一次 HTTP 请求，再撤销 |
 | `connect` | `bytehop connect <resource> [options] -- <command> [args...]` | 让现有 HTTP client 使用临时本地入口 |
 | `status` | `bytehop status [--all] [--json]` | 查看 Lease 与活动请求 |
@@ -29,13 +29,17 @@ bytehop <command> [options]
 | `--ttl <duration>` | 请求 Lease TTL，不能超过 policy |
 | `--agent-id <id>` | Agent 关联 ID；也可用 `BYTEHOP_AGENT_ID` |
 | `--task-id <id>` | Task 关联 ID；也可用 `BYTEHOP_TASK_ID` |
+| `--source-platform <name>` | 消息来源平台；也可用 `BYTEHOP_SOURCE_PLATFORM` |
+| `--source-user-id <id>` | 平台用户关联 ID；也可用 `BYTEHOP_SOURCE_USER_ID` |
 | `--json` | 输出机器可读 envelope |
 
 `--format json` 仅为兼容保留，新调用使用 `--json`。
 
+当 `HERMES_SESSION_ID` 存在时，CLI 自动使用 Hermes 的 Session、Platform 和 User ID 填充这些关联字段；显式参数和 `BYTEHOP_*` 环境变量优先。该过程不读取聊天内容，也不会把来源用户当作授权身份。
+
 ### `connect` 参数与环境变量
 
-参数：`--ttl`、`--agent-id`、`--task-id`。子命令前必须有 `--`。
+参数：`--ttl`、`--agent-id`、`--task-id`、`--source-platform`、`--source-user-id`。子命令前必须有 `--`。
 
 子进程获得 `BYTEHOP_ENDPOINT`、`BYTEHOP_RESOURCE`、`BYTEHOP_LEASE_ID` 与 `BYTEHOP_LEASE_EXPIRES_AT`。argv 中每个 `{endpoint}` 会被安全替换。
 
