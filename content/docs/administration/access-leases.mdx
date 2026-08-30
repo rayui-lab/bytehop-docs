@@ -3,7 +3,7 @@ title: 权限模型
 description: 理解控制面角色、ByteHop Resource policy 与上游数据权限如何共同决定一次访问。
 ---
 
-ByteHop 的权限不是一张“管理员 / 普通用户”表。一次请求要同时通过三层边界：
+ByteHop 的权限不是一张“管理员 / 普通用户”表。一次请求会经过三层权限检查：
 
 ```mermaid
 flowchart LR
@@ -87,9 +87,9 @@ ByteHop Resource policy 只决定“能不能使用这个入口”，不会解�
 
 如果数据范围不同，应创建不同上游身份并配置成不同 Resource。例如 `orders-summary` 和 `orders-sensitive`，而不是给 ByteHop 一个高权限账号后期待 Agent 自律。
 
-## OpenAPI 不是授权
+## OpenAPI 与运行时权限
 
-Resource 的 OpenAPI 只用于发现操作和输入结构。v0.1 不用它做运行时 method / path allowlist。通用 HTTP 与 Elasticsearch Resource 会拒绝 `CONNECT`、`TRACE` 和协议升级，但其他普通 HTTP 方法仍会转发；ClickHouse 仅允许 `GET`、`POST`。
+Resource 的 OpenAPI 用于发现操作和输入结构。运行时由 Resource policy、固定上游身份与 Bridge 控制可执行动作。通用 HTTP 与 Elasticsearch Resource 会拒绝 `CONNECT`、`TRACE` 和协议升级；ClickHouse 接受 `GET`、`POST`。
 
 因此：
 
@@ -97,7 +97,7 @@ Resource 的 OpenAPI 只用于发现操作和输入结构。v0.1 不用它做运
 - 对 MongoDB、CLI 或脚本，用小型 Bridge 只公开少量领域操作；
 - 不要把“文档里没写这个 endpoint”当成访问控制。
 
-完整协议行为见 [HTTP 转发边界](../reference/http-behavior)。
+完整协议行为见 [HTTP 转发规则](../reference/http-behavior)。
 
 ## Lease 生命周期
 
@@ -126,6 +126,6 @@ Lease 绑定创建它的身份、Session、Resource、组快照、Agent ID、Tas
 
 Access 收紧会撤销已经不再满足新 policy 的 Lease。删除用户或修改密码会撤销其 Session 与派生 Lease。更多操作见[成员生命周期](./member-lifecycle)和[安全热重载](./reload)。
 
-<Callout title="当前身份边界">
-  v0.1 只支持 YAML 本地用户，还没有 OIDC、飞书登录、SCIM 或自动化用户目录同步。每位成员仍应使用独立账号；不要把共享账号当成暂时的团队便利。
+<Callout title="当前身份方式">
+  v0.1 使用 YAML 本地用户目录。每位成员应使用独立账号，确保 Lease、Operation 与 Event 都能准确归属。
 </Callout>

@@ -1,11 +1,11 @@
 ---
 title: 安全模型
-description: ByteHop 保护什么、信任什么，以及哪些风险仍需部署者承担。
+description: ByteHop 如何保护凭证、Session、Lease 与上游访问。
 ---
 
-ByteHop 的目标是减少长期上游 credential 的暴露面，并让 Agent 访问可归属、可到期、可撤销。它不是“部署后自动安全”的边界产品。
+ByteHop 减少长期上游 credential 的暴露面，并让 Agent 访问可归属、可到期、可撤销。整体安全性由 ByteHop、部署环境和上游最小权限共同完成。
 
-## 信任边界
+## 信任关系
 
 ```mermaid
 flowchart LR
@@ -45,14 +45,14 @@ ByteHop 主机、配置注入渠道、SQLite、TLS 私钥与上游固定 credent
 - 配置热重载是全量校验后的原子切换，不部分应用失败配置；
 - 进程重启会撤销上一进程遗留的 active Session 与 Lease。
 
-## 不防护的风险
+## 部署侧职责
 
 - 固定上游账号本身权限过大；
 - Agent 发出权限范围内但昂贵、错误或有隐私影响的查询；
 - 上游返回内容中的 prompt injection；
 - ByteHop 主机被攻破或环境变量被读取；
-- v0.1 单节点故障、SQLite 丢失或缺少外部备份；
-- 本地认证口令的企业级生命周期与 MFA；
+- ByteHop 主机、SQLite 和配置的备份恢复；
+- 本地用户口令的创建、轮换和回收；
 - 通用 HTTP / Elasticsearch 的 OpenAPI 契约被误认为运行时 allowlist。
 
 ## 数据最小化
@@ -61,4 +61,4 @@ ByteHop 不默认保存响应体和通用请求体。ClickHouse 保存有界 SQL
 
 ## 最重要的部署原则
 
-把每个 Resource 的固定身份限制到“即使 ByteHop 被滥用，损害仍然有界”。Lease、审计和 UI 是第二层；数据库 / API 的最小权限才是最终边界。
+为每个 Resource 配置独立的最小权限身份。Lease、Event 和 UI 提供临时授权与追踪，数据库 / API 的权限负责控制最终可访问的数据和动作。

@@ -3,7 +3,7 @@ title: HTTP API 与 Bridge
 description: 接入内部 API，或把 MongoDB、脚本等非 HTTP 能力包装成小而明确的 HTTP 操作。
 ---
 
-`kind: http` 是最通用的 Resource。它既能代理现有内部 API，也能把暂时不适合实现原生代理的数据库、CLI 或脚本包装成少量受限操作。
+`kind: http` 是最通用的 Resource。它既能代理现有内部 API，也能把数据库、CLI 或脚本包装成少量明确的 HTTP 操作。
 
 ## 接入已有内部 API
 
@@ -49,7 +49,7 @@ printf '%s' '{
 }' | bytehop request mongo-users POST /v1/find --body @- --json
 ```
 
-## Bridge 的边界
+## Bridge 的设计原则
 
 Bridge 不是“把任意命令放进 HTTP”。越通用，越容易重新引入远程代码执行和权限失控。一个合格的 Bridge 应提供领域动作，例如 `find_user`、`get_order_status`，或一个被严格限制的查询子集。
 
@@ -58,4 +58,4 @@ Bridge 不是“把任意命令放进 HTTP”。越通用，越容易重新引�
 - `dev-mongo-users`：真实 MongoDB + 只读 `find` Bridge，种子用户 `Ada`；
 - `dev-http-api`：模拟已有 Davinci 风格的 Basic + `tide_sid` 认证，提供 `info`、`echo` 与延迟响应。
 
-两者用于验证身份注入、Cookie 覆盖、OpenAPI 发现、超时和凭证不泄露，不代表已接入真实生产系统。
+两者提供身份注入、Cookie 覆盖、OpenAPI 发现、超时和凭证保护的接入模板。

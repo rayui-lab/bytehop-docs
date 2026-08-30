@@ -3,7 +3,7 @@ title: 安装 ByteHop
 description: 从固定源码版本构建并部署单实例 ByteHop，向团队分发匹配版本的 CLI。
 ---
 
-ByteHop v0.1 目前以源码交付：仓库还没有官方 Release 二进制、安装脚本、容器镜像仓库或包管理器渠道。普通成员不应该运行 Compose 验收栈；管理员应构建一次、部署一次，再分发已校验的 CLI。
+ByteHop v0.1 由管理员从固定源码版本统一构建、部署，并向团队分发经过校验的 CLI。普通成员直接使用团队实例，不需要运行 Compose 验收栈。
 
 ## 需要准备
 
@@ -63,7 +63,7 @@ bytehop healthcheck https://bytehop.example.com/healthz
 bytehop version
 ```
 
-服务端与 CLI 应固定为同一已验证版本。当前 API 尚未承诺跨大版本兼容。
+服务端与 CLI 应固定为同一已验证版本，升级时一起完成兼容性检查。
 
 ## 5. 完成首个接入
 
@@ -74,7 +74,3 @@ bytehop version
 3. [成员生命周期](./member-lifecycle)；
 4. 让成员按[第一次使用](../quickstart)完成登录与查询；
 5. 在 **Events** 确认调用者、Resource、request ID 与结果状态。
-
-<Callout type="warn" title="许可证仍需明确">
-  当前仓库尚未提供 License 文件。在许可证明确前，不要假定可以公开再分发构建物或镜像；团队内部使用也应先确认组织要求。
-</Callout>

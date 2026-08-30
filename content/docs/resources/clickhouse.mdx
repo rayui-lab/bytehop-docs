@@ -67,4 +67,4 @@ SQL 仍可能含业务字面量，因此 SQLite 与 Event 页面应视为敏感�
 
 ## 仓库内可复现案例
 
-开发 Compose 会创建 `bytehop_demo.events`，用固定只读用户查询两组 service 事件。Smoke test 还会启动 `SELECT sleep(3)`，从运行列表读取 SQL 和 query ID，再执行真实停止。这是工程验收案例，不是客户案例。
+开发 Compose 会创建 `bytehop_demo.events`，用固定只读用户查询两组 service 事件。Smoke test 还会启动 `SELECT sleep(3)`，从运行列表读取 SQL 和 query ID，再执行真实停止，用于验收完整链路。

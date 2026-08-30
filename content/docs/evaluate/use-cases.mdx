@@ -1,6 +1,6 @@
 ---
 title: 适用场景
-description: 用具体问题判断 ByteHop 是否值得部署，以及哪些情况应选择别的方案。
+description: 用具体案例理解 ByteHop 如何接入数据库、内部 API 和 Agent 工作流。
 ---
 
 ByteHop 的价值不在“能代理 HTTP”，而在把原本散落的长期凭证替换成可归属、短期、资源绑定的访问。
@@ -11,7 +11,7 @@ ByteHop 的价值不在“能代理 HTTP”，而在把原本散落的长期凭�
 
 **使用 ByteHop**：数据库管理员创建 `analytics_ro`，在 ClickHouse 侧限制库表、只读、执行时间和内存。工程师登录 ByteHop 后让 Agent 发现 `analytics`，每次查询自动领取短期 Lease。管理员可用 request/query ID 找到运行中的 SQL并停止单次请求。
 
-**仍然依赖**：ClickHouse 自己必须正确配置权限与配额。ByteHop 不判断 SQL 的业务正确性。
+**权限方式**：ClickHouse 继续负责表、只读、执行时间和内存配额，ByteHop 负责成员、Lease 和调用记录。
 
 ## 场景二：运营 Agent 查询 MongoDB 用户资料
 
@@ -19,7 +19,7 @@ ByteHop 的价值不在“能代理 HTTP”，而在把原本散落的长期凭�
 
 **使用 ByteHop**：在 MongoDB 附近部署一个 Bridge，只开放 `POST /v1/find`，限制 `users` collection、projection、limit 和 timeout。ByteHop 再为 Bridge 提供临时资源授权。Agent 不接触 Mongo URI，也不能调用 Bridge 未提供的操作。
 
-**取舍**：这不是原生 MongoDB client 体验；Bridge 需要维护明确的领域接口。
+**接入方式**：Bridge 维护少量明确的领域接口，使 Agent 只接触完成任务所需的操作。
 
 ## 场景三：替代分散的内部 HTTP CLI 凭证
 
@@ -32,18 +32,16 @@ bytehop connect davinci-stage --ttl 5m -- \
 
 这样不必立即重写现有 client，也能统一身份和 Event。若脚本能读取环境变量即可接入。
 
-## 场景四：小团队先建立“AI 访问生产”的最小边界
+## 场景四：小团队统一 AI 的生产访问
 
-团队还没有预算或人力维护完整 PAM，只需要覆盖两个数据库 HTTP API 与三条内部只读 API。ByteHop 单二进制 + YAML + SQLite 的部署模型适合先跑通；后续若需求增长到 SSH、Kubernetes、审批、录像或高可用，应迁移或组合更完整的平台。
+团队需要覆盖两个数据库 HTTP API 与三条内部只读 API。ByteHop 用单二进制、YAML 和 SQLite 统一 Resource、成员权限、Lease 与 Event，适合从一个高频只读场景开始逐步接入。
 
-## 不适用场景
+## 可组合的系统
 
-- BI 工具必须通过原生 PostgreSQL / MySQL / MongoDB 协议连接；
-- 需要 SSH、RDP、Kubernetes、数据库桌面客户端统一接入；
-- 需要企业级审批工作流、DLP、会话录屏和合规报表；
-- 需要多区域控制面和无状态水平扩容；
-- 不能接受 Bridge，且目标系统没有可靠 HTTP API。
+- 原生 PostgreSQL / MySQL / MongoDB 客户端可以继续使用现有数据库访问方案；
+- SSH、RDP、Kubernetes 与桌面客户端可由现有堡垒机或访问平台管理；
+- ByteHop 聚焦 Agent 使用的 HTTP Resource，并可与上述系统同时部署。
 
-<Callout title="这些案例的真实性">
-  ClickHouse、Elasticsearch、MongoDB Bridge 和 Davinci 风格 API 都在仓库 Compose 中有确定性数据与 smoke test，可在本地复现。它们是工程案例，不是假装成客户证言的营销案例。
+<Callout title="可复现的案例">
+  ClickHouse、Elasticsearch、MongoDB Bridge 和 Davinci 风格 API 都在仓库 Compose 中配有确定性数据与 smoke test，可用于本地验收完整链路。
 </Callout>

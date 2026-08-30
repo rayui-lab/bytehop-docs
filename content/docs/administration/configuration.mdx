@@ -54,7 +54,7 @@ bytehop config check --config ./bytehop.yaml
 bytehop serve --config ./bytehop.yaml
 ```
 
-ByteHop v0.1 不是 Secret Vault：它读取并使用 secret，但不负责轮换、版本或托管根凭证。生产环境应给 ByteHop 专用的最小权限上游身份。
+ByteHop 从部署环境读取 secret。轮换与版本继续交给现有 Secret 管理系统，生产环境为 ByteHop 配置专用的最小权限上游身份。
 
 ## 路径与严格校验
 

@@ -22,7 +22,7 @@ export default function HomePage() {
           <p className="mt-6 max-w-2xl text-pretty text-base leading-7 text-fd-muted-foreground sm:text-lg">
             ByteHop 将生产凭证集中保留在服务端，以短期、可撤销、绑定单一
             Resource 的 Lease，统一 ClickHouse、Elasticsearch 与内部 API
-            的访问边界。
+            的访问与记录方式。
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -35,7 +35,7 @@ export default function HomePage() {
               href="/docs/overview"
               className="inline-flex h-10 items-center rounded-lg border bg-fd-background px-4 text-sm font-medium text-fd-foreground hover:bg-fd-accent"
             >
-              先看边界
+              了解 ByteHop
             </Link>
           </div>
         </div>
@@ -118,14 +118,14 @@ export default function HomePage() {
         </div>
         <div className="rounded-xl border p-6">
           <p className="text-xs font-semibold uppercase tracking-[.16em] text-fd-muted-foreground">
-            不适合
+            接入方式
           </p>
           <h2 className="mt-3 text-xl font-semibold">
-            需要完整 PAM 或原生数据库协议
+            一个网关，一套 Agent 调用方式
           </h2>
           <p className="mt-3 text-sm leading-6 text-fd-muted-foreground">
-            如果必须接管 SSH、Kubernetes、RDP，或让原生 MongoDB / PostgreSQL
-            客户端透明连接，应优先评估更完整的访问平台。
+            ClickHouse、Elasticsearch 和内部 API 统一通过 Resource、Lease 与 CLI
+            使用，Agent 无需分别保存各系统的连接信息。
           </p>
         </div>
       </section>

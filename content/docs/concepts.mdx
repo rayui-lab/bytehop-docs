@@ -17,7 +17,7 @@ flowchart TD
   O --> E
 ```
 
-| 对象 | 含义 | 关键边界 |
+| 对象 | 含义 | 关键特性 |
 | --- | --- | --- |
 | Session | 用户登录后的控制面会话 | CLI 为 Bearer；Web 为 HttpOnly Cookie |
 | Resource | 一个可被访问的能力 | 包含上游、凭证、契约和类型，不等于整台服务器 |
@@ -38,4 +38,4 @@ Web 登出会撤销从该 Session 派生的 Lease；Lease 到期后也不再可�
 
 ## Event 能回答什么
 
-Event 适合回答“谁、何时、通过哪个 Agent、访问了哪个资源、结果如何、关联哪个请求”。ClickHouse 请求还可记录去除数据区后的 SQL 文本。Event 不是完整网络抓包，也不默认保存全部响应体。
+Event 适合回答“谁、何时、通过哪个 Agent、访问了哪个资源、结果如何、关联哪个请求”。ClickHouse 请求还可记录去除数据区后的 SQL 文本；通用请求保存元数据和安全处理后的操作摘要。

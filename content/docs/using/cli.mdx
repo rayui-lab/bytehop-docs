@@ -56,7 +56,7 @@ bytehop connect orders-api --ttl 10m -- \
 - `BYTEHOP_RESOURCE`：当前资源名；
 - `BYTEHOP_LEASE_ID`、`BYTEHOP_LEASE_EXPIRES_AT`：Lease 元数据。
 
-子进程退出后入口关闭，Lease 被撤销。它只转发 HTTP，不是通用 TCP 隧道。
+子进程退出后入口关闭，Lease 被撤销。`connect` 面向 HTTP client 提供临时本地入口。
 
 ## 查看与撤销
 

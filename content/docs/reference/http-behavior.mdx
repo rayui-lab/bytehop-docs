@@ -1,16 +1,16 @@
 ---
-title: HTTP 转发边界
+title: HTTP 转发规则
 description: ByteHop v0.1 数据面的 method、path、header、redirect、凭证注入与审计行为。
 ---
 
-ByteHop 的数据面是 HTTP 反向代理，不是通用 TCP 隧道。客户端用绑定单个 Resource 的 Lease 调用：
+ByteHop 的数据面使用 HTTP 反向代理。客户端用绑定单个 Resource 的 Lease 调用：
 
 ```text
 <METHOD> /proxy/{resource}/{path...}
 Authorization: Bearer <lease-token>
 ```
 
-CLI 的 `request` 与 `connect` 都建立在这条边界上。
+CLI 的 `request` 与 `connect` 都使用这套转发机制。
 
 ## Method 与协议
 
@@ -21,7 +21,7 @@ CLI 的 `request` 与 `connect` 都建立在这条边界上。
 | `http` | 转发普通 HTTP method |
 | 所有 kind | 拒绝 `CONNECT`、`TRACE` 和 HTTP protocol upgrade |
 
-v0.1 **没有通用的 per-Resource method / path allowlist**。OpenAPI 仅用于操作发现，不参与运行时授权。对通用 HTTP / Elasticsearch 的业务边界必须由专用上游身份落实；需要更窄操作面时，在上游前部署受限 HTTP Bridge。
+OpenAPI 用于操作发现。通用 HTTP / Elasticsearch 的业务动作由专用上游身份控制；需要更精确的 method / path 范围时，可以在上游前部署受限 HTTP Bridge。
 
 ## Path 与 query
 
@@ -55,7 +55,7 @@ CLI 不自动跟随 redirect，避免把 Lease token 或请求体重放到其他
 
 ## 请求与响应
 
-- Lease 的到期时间也是请求的最晚执行边界；到期或撤销会取消受控请求；
+- Lease 的到期时间也是请求的最晚执行时间；到期或撤销会取消受控请求；
 - `request` 默认流式输出响应；`request --json` 为统一 envelope 缓冲有限响应；
 - JSON 超过 `max_json_result_bytes` 时返回 `result_too_large`，不会静默截断；
 - CLI 的大请求体应改用 `connect` 配合现有流式 HTTP client；
@@ -65,11 +65,11 @@ ClickHouse 是例外：Event 会保存有界 SQL 与截断标记，但 `INSERT .
 
 ## OpenAPI 能做什么
 
-配置 `openapi` 后，`bytehop resources <name> --json` 会返回操作摘要和输入结构，帮助 Agent 少猜 endpoint。它不是 WAF、schema validation 或 authorization engine。
+配置 `openapi` 后，`bytehop resources <name> --json` 会返回操作摘要和输入结构，帮助 Agent 准确选择 endpoint。运行时权限继续由 Resource policy、固定上游身份与 Bridge 共同控制。
 
 需要运行时限制时，优先级是：
 
 1. 上游最小权限身份；
 2. 领域化 Bridge；
-3. 网络边界与配额；
+3. 网络访问控制与配额；
 4. 未来再评估 ByteHop method / path policy。

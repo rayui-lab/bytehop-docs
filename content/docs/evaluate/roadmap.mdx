@@ -1,0 +1,35 @@
+---
+title: 路线图
+description: ByteHop 已实现的能力，以及近期和中期的演进计划。
+---
+
+路线图优先提升生产可靠性、团队身份接入和 Resource 使用体验，再根据真实使用反馈扩展更多资源类型。
+
+## v0.1：当前能力
+
+- 单 Go 二进制：控制 API、HTTP 数据面、SQLite 和内嵌 Web；
+- 本地用户、group / user policy、短期 Resource Lease；
+- ClickHouse HTTP、Elasticsearch HTTP、通用 HTTP 与 Mongo Bridge；
+- Agent 友好 CLI、OpenAPI 操作发现、稳定 JSON 错误；
+- Event、ClickHouse SQL 历史、运行中查询与单请求停止；
+- 配置 check / diff / 原子热重载；
+- 可复现的 Docker Compose 集成环境。
+
+## 近期：生产使用体验
+
+1. **发布与升级**：版本化二进制、容器镜像、校验和、升级与回滚说明；
+2. **企业身份**：OIDC，优先覆盖团队已有的飞书 / 企业身份入口，并区分人类与非交互 service identity；
+3. **Secret provider**：接入文件 / Docker Secret，并评估 Vault 或云 Secret Manager；
+4. **运维能力**：健康指标、结构化日志、Event retention / 导出、备份恢复演练；
+5. **Resource contract**：OpenAPI lint、连接测试、部署前 smoke 和更清楚的 Agent 重试语义。
+
+## 中期：按使用证据扩展
+
+- 为 PostgreSQL 等资源提供可靠的 HTTP adapter / Bridge 接入方式；
+- 为高频内部 API 提供受限 capability 模板；
+- 增加控制面配置版本与变更 Event，保持 YAML 为事实源；
+- 在团队规模和调用量增长后，完善多实例状态与滚动升级语义。
+
+## 如何影响路线图
+
+有用的反馈应包含：Resource 类型、现有连接方式、上游最小权限怎么定义、一天调用量、需要保留什么 Event，以及可以接受的部署复杂度。这些信息会用于确定协议和 Resource 的实现优先级。

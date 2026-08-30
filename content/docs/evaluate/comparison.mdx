@@ -3,16 +3,16 @@ title: 与其他方案比较
 description: 从问题范围、客户端形态、协议和运维成本判断该用 ByteHop、现有平台还是直接凭证。
 ---
 
-以下比较按各产品公开文档整理，最后核对于 **2026-08-30**。产品会变化，请在选型时重新检查链接。ByteHop 不试图用一张表证明“全面更好”，它只在较窄的 Agent HTTP 访问问题上更轻。
+以下比较按各产品公开文档整理，最后核对于 **2026-08-30**。产品会变化，请在选型时重新检查链接。ByteHop 聚焦 Agent 使用 HTTP Resource 的临时访问。
 
 ## 快速判断
 
-| 方案 | 更适合解决 | 客户端 / 协议 | 对小团队的主要代价 |
+| 方案 | 更适合解决 | 客户端 / 协议 | 接入特点 |
 | --- | --- | --- | --- |
 | 直接分发只读凭证 | 临时、少量、低风险验证 | 任意原生客户端 | secret 散落，撤销、轮换和归属困难 |
 | 普通反向代理 / API Gateway | HTTP 路由、认证、限流 | HTTP | 通常缺少人 → Session → Resource Lease → Agent task 的模型 |
 | MCP Toolbox | 给 Agent 暴露数据库工具 | MCP 工具调用 | 与 MCP / 工具定义耦合，不是通用 HTTP 凭证交换层 |
-| ByteHop | Agent 使用少量生产 HTTP 能力 | CLI、HTTP；短期 Lease | v0.1 协议少、身份和 HA 尚基础 |
+| ByteHop | Agent 使用生产 HTTP Resource | CLI、HTTP；短期 Lease | Resource 需要 HTTP 接口或 Bridge |
 | StrongDM / Teleport / Hoop | 更广的基础设施访问与企业控制 | 多种原生协议及平台代理 | 平台范围、组件和运维成本更大 |
 | Warpgate | 自托管 SSH / HTTP / MySQL / PostgreSQL 堡垒入口 | 原生目标协议 | 重点是堡垒访问，不是 Agent 资源契约与一次性请求体验 |
 
@@ -29,7 +29,7 @@ ByteHop 的主线是“我已经有 HTTP 能力或 Bridge，要把固定 credent
 - [Hoop](https://hoop.dev/docs/gateway/overview) 提供 Gateway / Agent 形态，并扩展审批、DLP、会话记录和集成能力。
 - [Warpgate](https://warpgate.null.page/docs/) 是自托管堡垒入口，文档按 SSH、HTTP、MySQL 与 PostgreSQL target 组织。
 
-如果这些平台已经部署并能以合理体验支持 Agent，不应为了“更轻”重复建设。ByteHop 的差异是单进程、HTTP-first、Resource contract、一次性 `request` 和本地 `connect` adapter，而不是更多协议或更完整合规能力。
+ByteHop 可以与现有访问平台组合使用。它的特点是单进程、HTTP-first、Resource contract、一次性 `request` 和本地 `connect` adapter。
 
 ## 与 Git / YAML 直接共享的关系
 

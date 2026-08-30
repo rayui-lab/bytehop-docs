@@ -63,7 +63,7 @@ Authorization: Bearer <lease-token>
 
 ByteHop 验证 Lease 与 path 中 Resource 一致，剥离客户端敏感 / 代理 headers，注入 Resource credential，再把响应返回客户端。
 
-响应会带 `X-ByteHop-Request-Id`；ClickHouse 还会提供 query ID 关联信息。外部或越界 redirect 不会被自动跟随。
+响应会带 `X-ByteHop-Request-Id`；ClickHouse 还会提供 query ID 关联信息。指向其他 origin 或超出当前 Resource 路径的 redirect 不会被自动跟随。
 
 ## 错误结构
 
@@ -79,6 +79,6 @@ ByteHop 验证 Lease 与 path 中 Resource 一致，剥离客户端敏感 / 代�
 }
 ```
 
-API 尚未承诺跨大版本稳定。正式 SDK 或第三方集成应固定 ByteHop 版本，并覆盖错误 code 与 Lease 清理测试。
+SDK 或第三方集成应固定经过验证的 ByteHop 版本，并覆盖错误 code 与 Lease 清理测试。
 
-完整转发规则见 [HTTP 转发边界](./http-behavior)，错误处理见[错误与重试](./errors)。
+完整规则见 [HTTP 转发规则](./http-behavior)，错误处理见[错误与重试](./errors)。

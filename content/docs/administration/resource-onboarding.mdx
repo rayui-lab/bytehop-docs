@@ -3,7 +3,7 @@ title: 接入 Resource
 description: 从最小权限上游身份开始，把一个数据库或内部 API 安全接入 ByteHop。
 ---
 
-接入 Resource 的顺序应是“先定义数据边界，再配置网关”，不是先把管理员凭证填进 YAML。
+接入 Resource 的顺序应是“先定义数据范围，再配置网关”，不要先把管理员凭证填进 YAML。
 
 ## 1. 定义最小能力
 
@@ -48,7 +48,7 @@ resources:
       server_name: "clickhouse.internal"
 ```
 
-Resource 名是 Agent 会使用的稳定标识。描述应说明用途和边界，例如“订单汇总，只读”，不要只写“生产库”。
+Resource 名是 Agent 会使用的稳定标识。描述应说明用途和范围，例如“订单汇总，只读”，不要只写“生产库”。
 
 ## 4. 添加最小 Access policy
 
