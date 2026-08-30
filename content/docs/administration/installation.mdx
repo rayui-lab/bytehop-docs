@@ -3,17 +3,40 @@ title: 安装 ByteHop
 description: 使用官方二进制或容器镜像安装同一版本的服务端与 CLI。
 ---
 
-ByteHop 的服务端和 CLI 是同一个二进制文件。团队管理员通常用容器运行服务端，成员从同一个 GitHub Release 下载本机 CLI；两者固定为相同版本。
+ByteHop 的服务端和 CLI 是同一个二进制文件。团队管理员通常用容器运行服务端，成员从公开的 [bytehop-dist](https://github.com/rayui-lab/bytehop-dist) 下载本机 CLI；两者固定为相同版本。
 
 ## 选择安装方式
 
 | 使用场景 | 推荐方式 |
 | --- | --- |
 | 在 Linux 主机部署团队实例 | [Docker Compose](./docker) |
-| 在 macOS、Linux 或 Windows 安装 CLI | GitHub Release 二进制 |
+| 在 macOS、Linux 或 Windows 安装 CLI | bytehop-dist Release 二进制 |
 | 修改 ByteHop 本身 | [从源码构建](../development/source-build) |
 
-## 安装预编译二进制
+## 快速安装 CLI
+
+macOS 或 Linux：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | sh
+```
+
+脚本只做四件事：识别系统与架构、下载 Release、验证 SHA-256、安装 `bytehop`。默认安装最新稳定版到 `/usr/local/bin`。
+
+固定版本或自定义目录：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | \
+  sh -s -- --version 0.1.0 --install-dir "$HOME/.local/bin"
+```
+
+安装后确认：
+
+```bash
+bytehop version
+```
+
+## 手动安装预编译二进制
 
 每个 Release 提供以下平台：
 
@@ -27,15 +50,15 @@ ByteHop 的服务端和 CLI 是同一个二进制文件。团队管理员通常�
 
 ```bash
 VERSION=0.1.0
-curl -fLO "https://github.com/rayui-lab/bytehop/releases/download/v${VERSION}/bytehop_${VERSION}_linux_amd64.tar.gz"
-curl -fLO "https://github.com/rayui-lab/bytehop/releases/download/v${VERSION}/SHA256SUMS"
+curl -fLO "https://github.com/rayui-lab/bytehop-dist/releases/download/v${VERSION}/bytehop_${VERSION}_linux_amd64.tar.gz"
+curl -fLO "https://github.com/rayui-lab/bytehop-dist/releases/download/v${VERSION}/SHA256SUMS"
 grep "bytehop_${VERSION}_linux_amd64.tar.gz" SHA256SUMS | sha256sum -c -
 tar -xzf "bytehop_${VERSION}_linux_amd64.tar.gz"
 sudo install -m 0755 "bytehop_${VERSION}_linux_amd64/bytehop" /usr/local/bin/bytehop
 bytehop version
 ```
 
-macOS 使用对应的 `darwin_amd64` 或 `darwin_arm64` 包，并把校验命令换成 `shasum -a 256 -c`。Windows 解压 `.zip` 后，将 `bytehop.exe` 放进受控的软件目录并加入 `PATH`。
+macOS 使用对应的 `darwin_amd64` 或 `darwin_arm64` 包，并把校验命令换成 `shasum -a 256 -c`。Windows 从 [bytehop-dist Releases](https://github.com/rayui-lab/bytehop-dist/releases/latest) 下载 `.zip`，解压后将 `bytehop.exe` 放进受控的软件目录并加入 `PATH`。
 
 <Callout title="先核对再安装">
   校验和文件与二进制必须来自同一个 Release。不要从聊天附件、临时网盘或不明镜像分发 ByteHop。

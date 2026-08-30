@@ -11,14 +11,27 @@ description: 管理员已经部署 ByteHop 后，完成登录、发现资源，�
 
 - ByteHop 地址，例如 `https://bytehop.example.com`；
 - 你的独立用户名和初始密码；
-- 已安装 `bytehop` CLI；
 - 至少有一个 Resource 已授权给你。
 
-<Callout title="使用团队统一版本">
-  ByteHop CLI 应从团队确认过的 GitHub Release 或内部软件源安装。安装后先核对版本和校验和；管理员请看[安装 ByteHop](./administration/installation)。
-</Callout>
+## 1. 安装 CLI
 
-## 1. 登录
+macOS 或 Linux 运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rayui-lab/bytehop-dist/main/install.sh | sh
+```
+
+安装器会识别操作系统和 CPU 架构，从公开的
+[bytehop-dist](https://github.com/rayui-lab/bytehop-dist/releases/latest)
+下载最新 Release，并在安装前核对 SHA-256。Windows 请从同一页面下载对应的 `.zip`。
+
+```bash
+bytehop version
+```
+
+如果团队固定了版本或使用内部软件源，请按管理员提供的方式安装。手动下载、指定版本和自定义安装目录见[安装 ByteHop](./administration/installation)。
+
+## 2. 登录
 
 在可信终端中读取密码，避免把它留在 shell history：
 
@@ -32,7 +45,7 @@ unset BYTEHOP_PASSWORD
 
 登录成功后，CLI 在本机保存一个权限为 `0600` 的 ByteHop Session。它不是数据库或 API 的真实凭证。
 
-## 2. 看自己能用什么
+## 3. 看自己能用什么
 
 ```bash
 bytehop resources
@@ -48,7 +61,7 @@ bytehop resources analytics --json
 
 详情包含 Resource 类型、最大 Lease 时间，以及可发现的操作。它不会返回上游地址和真实 credential。
 
-## 3. 让 Agent 使用
+## 4. 让 Agent 使用
 
 把下面这段话粘贴到 Codex、Claude 或其他能运行本地命令的 Agent 对话中：
 
@@ -63,7 +76,7 @@ bytehop resources analytics --json
 
 如果团队已经安装仓库内的 ByteHop Skill，Agent 会自动遵循同一流程。安装方式见[给 Agent 使用](./using/agent-workflow)。
 
-## 4. 自己验证一次请求
+## 5. 自己验证一次请求
 
 下面是 ClickHouse HTTP Resource 的示例。把 `analytics` 和 SQL 换成管理员提供的 Resource 与查询范围：
 
@@ -77,7 +90,7 @@ printf '%s' \
 
 `request` 会为这次调用领取短 Lease，完成后自动撤销。返回中的 `request_id` 用于排障；ClickHouse 还会返回 `query_id`。真实数据库用户名和密码不会出现在结果里。
 
-## 5. 查看和结束自己的访问
+## 6. 查看和结束自己的访问
 
 打开管理员给出的 ByteHop 地址。普通成员可以查看自己的 Resource、Lease、运行中请求和历史 Event，并停止自己卡住的请求。
 

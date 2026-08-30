@@ -3,10 +3,10 @@
 @import "fumadocs-ui/css/preset.css";
 
 :root {
-  --bytehop-accent: #087d76;
-  --color-fd-primary: #087d76;
+  --bytehop-accent: #087f70;
+  --color-fd-primary: #087f70;
   --color-fd-primary-foreground: #f5fffd;
-  --color-fd-ring: #0f9f94;
+  --color-fd-ring: #0d9a86;
   --color-fd-background: #fbfcfc;
   --color-fd-card: #f5f8f7;
   --color-fd-muted: #eef3f2;
@@ -64,8 +64,16 @@ body {
       color-mix(in oklab, var(--color-fd-border) 42%, transparent) 1px,
       transparent 1px
     );
-  background-size: 28px 28px;
-  mask-image: linear-gradient(to bottom, black 15%, transparent 82%);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black 8%, transparent 86%);
+}
+
+.bytehop-glow {
+  background: radial-gradient(
+    ellipse at top,
+    color-mix(in oklab, var(--bytehop-accent) 13%, transparent),
+    transparent 68%
+  );
 }
 
 .bytehop-diagram {

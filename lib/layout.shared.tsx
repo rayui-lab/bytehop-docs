@@ -31,6 +31,12 @@ export function baseOptions(): BaseLayoutProps {
         type: "button",
         on: "nav",
       },
+      {
+        text: "下载",
+        url: "https://github.com/rayui-lab/bytehop-dist/releases/latest",
+        external: true,
+        on: "nav",
+      },
     ],
   };
 }
