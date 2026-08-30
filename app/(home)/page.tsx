@@ -567,11 +567,11 @@ export default function HomePage() {
             aria-hidden="true"
           />
           <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-normal leading-tight tracking-[-0.05em] sm:text-5xl">
-            从 CLI、Skill 和一个只读 Resource 开始
+            已有实例就连接，没有实例先部署
           </h2>
           <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-[#666] sm:text-base">
-            安装 Skill 后直接向 Agent 描述任务；ByteHop
-            统一处理发现、Lease、凭证注入、调用与记录。
+            使用者向管理员获取 Server 地址和账号，需要 AI 时安装 CLI 与
+            Skill；管理员先用 Docker 部署 Server，再创建用户、Resource 和权限。
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link

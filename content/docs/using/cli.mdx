@@ -3,7 +3,9 @@ title: CLI 使用方式
 description: 登录、发现资源、发起请求、连接现有 HTTP 工具和撤销访问。
 ---
 
-CLI 面向人、Agent 和自动化脚本。命令默认输出简洁的人类文本；需要机器读取时统一加 `--json`。
+CLI 面向人、Agent 和自动化脚本，用于连接一个已经部署好的 ByteHop Server。使用前需要管理员提供 Server 地址和 ByteHop 账号；只在 Web 查看资源和 Event 时不必安装 CLI。
+
+命令默认输出简洁的人类文本；需要机器读取时统一加 `--json`。安装方法见[安装客户端](/docs/using/client-installation)。
 
 <Callout title="Agent 优先安装 ByteHop Skill">
   人可以直接使用下面的命令。Codex、Claude 等 Agent 应安装 [ByteHop Skill](/docs/using/agent-workflow)，由 Skill 根据任务选择命令、读取 Resource 调用说明并处理错误，不需要在每次对话中重写这些规则。

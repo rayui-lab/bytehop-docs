@@ -27,9 +27,14 @@ export function baseOptions(): BaseLayoutProps {
         on: "nav",
       },
       {
-        text: "开始使用",
+        text: "使用者",
         url: "/docs/quickstart",
         type: "button",
+        on: "nav",
+      },
+      {
+        text: "部署",
+        url: "/docs/administration/installation",
         on: "nav",
       },
       {

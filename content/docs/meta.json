@@ -2,8 +2,8 @@
   "title": "ByteHop",
   "pages": [
     "index",
-    "overview",
     "quickstart",
+    "overview",
     "concepts",
     "using",
     "resources",
